@@ -15,4 +15,8 @@
     <ProjectReference Include="..\ZeroIoC\ZeroIoC.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="../ZeroIoC/ZeroIoC.cs" />
+  </ItemGroup>
+
 </Project>

@@ -8,11 +8,17 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CSharp;
+using System.IO;
 
 namespace ZeroIoC.Tests.Utils
 {
     public static class TestExtensions
     {
+        public static async Task<Project> ApplyToProgram(this Project project, string newText)
+        {
+            return await project.ReplacePartOfDocumentAsync("Program.cs", "// place to replace", newText);
+        }
+
         public static async Task<Project> ReplacePartOfDocumentAsync(this Project project, string documentName, string textToReplace, string newText)
         {
             var document = project.Documents.First(o => o.Name == documentName);
@@ -69,10 +75,10 @@ namespace ZeroIoC.Tests.Utils
             return member.GetValue(@object);
         }
 
-        public static object ReflectionCall(this object @object, string name)
+        public static object ReflectionCall(this object @object, string name, params object[] args)
         {
             var nonPublic = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-            var member = @object.GetType().GetField(name, nonPublic);
+            var member = @object.GetType().GetMethod(name, nonPublic);
             if (member is null)
             {
                 return @object
@@ -81,7 +87,26 @@ namespace ZeroIoC.Tests.Utils
                     ?.GetValue(@object);
             }
 
-            return member.GetValue(@object);
+            return member.Invoke(@object, args);
+        }
+
+        public static async Task<Assembly> CompileToRealAssembly(this Project project)
+        {
+            var compilation = await project.GetCompilationAsync();
+            var error = compilation.GetDiagnostics().FirstOrDefault(o => o.Severity == DiagnosticSeverity.Error);
+            if (error != null)
+            {
+                throw new Exception(error.GetMessage());
+            }
+
+            using (var memoryStream = new MemoryStream())
+            {
+                compilation.Emit(memoryStream);
+                var bytes = memoryStream.ToArray();
+                var assembly = Assembly.Load(bytes);
+
+                return assembly;
+            }
         }
     }
 }

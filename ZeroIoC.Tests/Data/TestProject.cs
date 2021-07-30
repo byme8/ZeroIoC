@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
@@ -16,7 +17,8 @@ namespace ZeroIoC.Tests.Data
             Project = workspace
                 .AddProject("TestProject", LanguageNames.CSharp)
                 .WithMetadataReferences(GetReferences())
-                .AddDocument("Program.cs", ProgramCS).Project;
+                .AddDocument("Program.cs", ProgramCS).Project
+                .AddDocument("Core.cs", File.ReadAllText("../../../../ZeroIoC/ZeroIoC.cs")).Project;
         }
 
 
@@ -32,15 +34,17 @@ namespace ZeroIoC.Tests.Data
                 MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(Attribute).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(ArrayPool<>).Assembly.Location),
-                //MetadataReference.CreateFromFile(typeof(DuckableAttribute).Assembly.Location),
             };
         }
 
         public const string ProgramCS = @"
 using System;
+using ZeroIoC;
 
 namespace TestProject 
 {
+    // place to replace
+
     class Program
     {
         static void Main(string[] args)
