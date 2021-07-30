@@ -15,7 +15,7 @@ namespace ZeroIoC.Sample
 
     public class Helper { }
 
-    public partial class Container : ZeroIoCContainer
+    public partial class Container : ZeroIoCContainer<Container>
     {
         protected override void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper)
         {
@@ -29,7 +29,7 @@ namespace ZeroIoC.Sample
         static void Main(string[] args)
         {
             var container = new Container();
-            var userService = container.GetService<IUserService>();
+            var userService = container.Resolve<IUserService>();
         }
     }
 }

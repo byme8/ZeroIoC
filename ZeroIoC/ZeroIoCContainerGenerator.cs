@@ -21,12 +21,18 @@ namespace ZeroIoC
                 return;
             }
 
-            var classDeclaration = receiver.Declarations.First();
+            foreach (var classDeclaration in receiver.Declarations)
+            {
+                GenerateContainer(context, classDeclaration);
+            }
+        }
 
+        private static void GenerateContainer(GeneratorExecutionContext context, ClassDeclarationSyntax classDeclaration)
+        {
             var bootstrapMethod = classDeclaration
-                .DescendantNodes()
-                .OfType<MethodDeclarationSyntax>()
-                .FirstOrDefault(o => o.Identifier.Text == "Bootstrap");
+                            .DescendantNodes()
+                            .OfType<MethodDeclarationSyntax>()
+                            .FirstOrDefault(o => o.Identifier.Text == "Bootstrap");
 
             if (bootstrapMethod == null)
             {
@@ -42,7 +48,7 @@ namespace ZeroIoC
             var transients = new List<(TypeSyntax Interface, TypeSyntax Implmentation)>();
             foreach (var invocation in invocations)
             {
-                if (invocation.Expression is MemberAccessExpressionSyntax member && 
+                if (invocation.Expression is MemberAccessExpressionSyntax member &&
                     member.Name is GenericNameSyntax generic)
                 {
                     switch (generic.Identifier.Text)
@@ -94,7 +100,7 @@ namespace ZeroIoC
                     var implementationSymbol = semantic.GetSpeculativeTypeInfo(o.Implmentation.SpanStart,
                         o.Implmentation, SpeculativeBindingOption.BindAsTypeOrNamespace);
 
-                    return new {Interface = interfaceSymbol.Type!, Implementation = implementationSymbol.Type!};
+                    return new { Interface = interfaceSymbol.Type!, Implementation = implementationSymbol.Type! };
                 })
                 .ToArray();
 
@@ -119,17 +125,13 @@ namespace {containerType.ContainingNamespace}
 {{
     public partial class {containerType.Name}
     {{
-
-
         public {containerType.Name}()
         {{
-        {singletonSymbols.Select(o => 
+        {singletonSymbols.Select(o =>
 $@"        StaticResolvers.Add(typeof({o.Interface.ToGlobalName()}), new SignletonResolver(() => new {o.Implementation.ToGlobalName()}()));").JoinWithNewLine()}
         {transientSymbols.Select(o =>
 $@"        StaticResolvers.Add(typeof({o.Interface.ToGlobalName()}), new TransientResolver(() => new {o.Implementation.ToGlobalName()}()));").JoinWithNewLine()}
         }}
-
-      
     }}
 }}
 ";
@@ -152,7 +154,9 @@ $@"        StaticResolvers.Add(typeof({o.Interface.ToGlobalName()}), new Transie
             {
                 case ClassDeclarationSyntax classDeclaration:
                     if (classDeclaration.BaseList?.Types
-                        .Any(o => o.Type.ToString() == "ZeroIoCContainer") ?? false)
+                        .Select(o => o.Type)
+                        .OfType<GenericNameSyntax>()
+                        .Any(o => o.Identifier.Text == "ZeroIoCContainer") ?? false)
                     {
                         Declarations.Add(classDeclaration);
                     }

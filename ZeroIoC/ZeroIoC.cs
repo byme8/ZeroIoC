@@ -4,6 +4,11 @@ using System.Reflection;
 
 namespace ZeroIoC
 {
+    public interface IZeroIoCResolver
+    {
+        object Resolve(Type serviceType);
+    }
+
     public interface IZeroIoCContainerBootstrapper
     {
         void AddTransient<TImplementation>();
@@ -12,13 +17,13 @@ namespace ZeroIoC
         void AddSingleton<TInterface, TImplementation>();
     }
 
-    public abstract class ZeroIoCContainer
+    public abstract class ZeroIoCContainer<TContainer> : IZeroIoCResolver
     {
         protected static Dictionary<Type, IInstanceResolver> StaticResolvers = new Dictionary<Type, IInstanceResolver>();
 
         protected abstract void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper);
 
-        public object GetService(Type type)
+        public object Resolve(Type type)
         {
             if (!StaticResolvers.TryGetValue(type, out var resolver))
             {
@@ -33,9 +38,9 @@ namespace ZeroIoC
 
     public static class ZeroIoCContainerExtensions
     {
-        public static TService GetService<TService>(this ZeroIoCContainer container)
+        public static TService Resolve<TService>(this IZeroIoCResolver container)
         {
-            return (TService)container.GetService(typeof(TService));
+            return (TService)container.Resolve(typeof(TService));
         }
     }
 
