@@ -25,13 +25,13 @@ namespace ZeroIoC
         public void Dispose() { }
     }
 
-    public sealed class SignletonResolver : InstanceResolver
+    public sealed class SingletonResolver : InstanceResolver
     {
         private readonly Func<object> activator;
         private object cache;
         private bool _disposed;
 
-        public SignletonResolver(Func<object> activator)
+        public SingletonResolver(Func<object> activator)
         {
             this.activator = activator;
         }
@@ -53,7 +53,7 @@ namespace ZeroIoC
             return cache;
         }
 
-        public InstanceResolver Duplicate() => new SignletonResolver(activator);
+        public InstanceResolver Duplicate() => new SingletonResolver(activator);
 
         public void Dispose()
         {
