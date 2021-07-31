@@ -9,11 +9,21 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.CSharp;
 using System.IO;
+using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace ZeroIoC.Tests.Utils
 {
     public static class TestExtensions
     {
+        public static async Task<ImmutableArray<Diagnostic>> ApplyAnalyzer(this Project project, DiagnosticAnalyzer analyzer)
+        {
+            var compilation = await project.GetCompilationAsync();
+            var newCompilation = compilation.WithAnalyzers(ImmutableArray.Create(analyzer));
+            var diagnostics = await newCompilation.GetAllDiagnosticsAsync();
+
+            return diagnostics;
+        }
+
         public static async Task<Project> ApplyToProgram(this Project project, string newText)
         {
             return await project.ReplacePartOfDocumentAsync("Program.cs", "// place to replace", newText);

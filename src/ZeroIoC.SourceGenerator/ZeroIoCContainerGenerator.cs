@@ -32,7 +32,7 @@ namespace ZeroIoC
             var bootstrapMethod = classDeclaration
                             .DescendantNodes()
                             .OfType<MethodDeclarationSyntax>()
-                            .FirstOrDefault(o => o.Identifier.Text == "Bootstrap");
+                .FirstOrDefault(o => o.Identifier.Text == "Bootstrap");
 
             if (bootstrapMethod == null)
             {
@@ -47,7 +47,7 @@ namespace ZeroIoC
             var semantic = context.Compilation.GetSemanticModel(classDeclaration.SyntaxTree);
             var singletons = new List<(ITypeSymbol Interface, ITypeSymbol Implementation)>();
             var transients = new List<(ITypeSymbol Interface, ITypeSymbol Implementation)>();
-            var scoped = new List<(ITypeSymbol Interface, ITypeSymbol Implementation)> ();
+            var scoped = new List<(ITypeSymbol Interface, ITypeSymbol Implementation)>();
             foreach (var invocation in invocations)
             {
                 if (invocation.Expression is MemberAccessExpressionSyntax member &&
@@ -117,7 +117,7 @@ $@"        ScopedResolvers.Add(typeof({o.Interface.ToGlobalName()}), new Singlet
 
             if (members.Length > 1)
             {
-                
+
             }
 
             var constructor = members.First();
