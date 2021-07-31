@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZeroIoC.Core\ZeroIoC.Core.csproj" />
-    <ProjectReference Include="..\ZeroIoC\ZeroIoC.csproj" />
+    <ProjectReference Include="..\ZeroIoC.SourceGenerator\ZeroIoC.SourceGenerator.csproj" />
   </ItemGroup>
 
 </Project>

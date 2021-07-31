@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <RootNamespace>ZeroIoC</RootNamespace>
+    <Description>Contains source generators for ZeroIoC.</Description>
   </PropertyGroup>
 
   <ItemGroup>

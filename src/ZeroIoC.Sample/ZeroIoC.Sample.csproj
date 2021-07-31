@@ -7,7 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ZeroIoC.Core\ZeroIoC.Core.csproj" />
-    <ProjectReference Include="..\ZeroIoC\ZeroIoC.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\ZeroIoC.SourceGenerator\ZeroIoC.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

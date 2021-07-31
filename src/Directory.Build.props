@@ -1,0 +1,13 @@
+<Project>
+  <PropertyGroup>
+    <Version>0.0.3</Version>
+    <Authors>Stanislav Silin</Authors>
+    <Company>Stanislav Silin</Company>
+    <PackageProjectUrl>https://github.com/byme8/ZeroIoC</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/byme8/ZeroIoC</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageTags>ZeroIoC, analyzers, code generation, ioc, aot</PackageTags>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+</Project>

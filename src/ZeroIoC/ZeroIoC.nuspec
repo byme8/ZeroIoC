@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>ZeroIoC</id>
+    <version>0.0.1</version>
+    <authors>Stanislav Silin</authors>
+    <owners>Stanislav Silin</owners>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://licenses.nuget.org/MIT</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Reflectionless dependency injection container.</description>
+    <dependencies>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="ZeroIoC.SourceGenerator" version="$version$" exclude="build,compile,runtime,contentFiles,native" include='analyzers' />
+        <dependency id="ZeroIoC.Core" version="$version$" exclude="build,analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="**" exclude="**" />
+  </files>
+</package>

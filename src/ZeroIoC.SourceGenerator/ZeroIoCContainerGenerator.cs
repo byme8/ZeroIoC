@@ -85,11 +85,11 @@ namespace {containerType.ContainingNamespace}
         public {containerType.Name}()
         {{
         {singletons.Select(o =>
-$@"        Resolvers.Add(typeof({o.Interface.ToGlobalName()}), new SignletonResolver(() => new {o.Implementation.ToGlobalName()}()));").JoinWithNewLine()}
+$@"        Resolvers.Add(typeof({o.Interface.ToGlobalName()}), new SignletonResolver({ResolveConstructor(o.Implementation)}));").JoinWithNewLine()}
         {transients.Select(o =>
-$@"        Resolvers.Add(typeof({o.Interface.ToGlobalName()}), new TransientResolver(() => new {o.Implementation.ToGlobalName()}()));").JoinWithNewLine()}
+$@"        Resolvers.Add(typeof({o.Interface.ToGlobalName()}), new TransientResolver({ResolveConstructor(o.Implementation)}));").JoinWithNewLine()}
         {scoped.Select(o =>
-$@"        ScopedResolvers.Add(typeof({o.Interface.ToGlobalName()}), new SignletonResolver(() => new {o.Implementation.ToGlobalName()}()));").JoinWithNewLine()}
+$@"        ScopedResolvers.Add(typeof({o.Interface.ToGlobalName()}), new SignletonResolver({ResolveConstructor(o.Implementation)}));").JoinWithNewLine()}
         }}
 
         protected {containerType.Name}(Dictionary<Type, InstanceResolver> resolvers, Dictionary<Type, InstanceResolver> scopedResolvers, bool scope = false)
@@ -106,6 +106,12 @@ $@"        ScopedResolvers.Add(typeof({o.Interface.ToGlobalName()}), new Signlet
 }}
 ";
             context.AddSource(classDeclaration.Identifier.Text + "_ZeroIoCContainer", source);
+        }
+
+        private static string ResolveConstructor(ITypeSymbol typeSymbol)
+        {
+            var members = typeSymbol.GetAllMembers();
+            return $"() => new {typeSymbol.ToGlobalName()}()";
         }
 
         private static void AddTypes(List<(ITypeSymbol Interface, ITypeSymbol Implementation)> singletons, GenericNameSyntax generic, SemanticModel semantic)
