@@ -3,7 +3,11 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <NuspecFile>ZeroIoC.nuspec</NuspecFile>
-    <NuspecProperties>version=$(Version);</NuspecProperties>
+    <NuspecProperties>
+      version=$(Version);
+      authors=$(Authors);
+      owners=$(Owners);
+    </NuspecProperties>
   </PropertyGroup>
 
   <ItemGroup>
