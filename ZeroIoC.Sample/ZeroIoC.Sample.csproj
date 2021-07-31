@@ -6,11 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ZeroIoC\ZeroIoC.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="../ZeroIoC/ZeroIoC.cs" />
+    <ProjectReference Include="..\ZeroIoC.Core\ZeroIoC.Core.csproj" />
+    <ProjectReference Include="..\ZeroIoC\ZeroIoC.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

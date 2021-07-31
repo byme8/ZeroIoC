@@ -15,7 +15,7 @@ namespace ZeroIoC.Sample
 
     public class Helper { }
 
-    public partial class Container : ZeroIoCContainer<Container>
+    public partial class Container : ZeroIoCContainer
     {
         protected override void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper)
         {

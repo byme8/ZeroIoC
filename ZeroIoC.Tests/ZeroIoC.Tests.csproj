@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,11 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ZeroIoC.Core\ZeroIoC.Core.csproj" />
     <ProjectReference Include="..\ZeroIoC\ZeroIoC.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="../ZeroIoC/ZeroIoC.cs" />
   </ItemGroup>
 
 </Project>

@@ -7,7 +7,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZeroIoC", "ZeroIoC\ZeroIoC.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZeroIoC.Tests", "ZeroIoC.Tests\ZeroIoC.Tests.csproj", "{0090F938-F627-4778-9308-9A61302C8930}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroIoC.Sample", "ZeroIoC.Sample\ZeroIoC.Sample.csproj", "{CA1B04C4-0D34-4A08-A2A7-4AB37EE2E67A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZeroIoC.Sample", "ZeroIoC.Sample\ZeroIoC.Sample.csproj", "{CA1B04C4-0D34-4A08-A2A7-4AB37EE2E67A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZeroIoC.Core", "ZeroIoC.Core\ZeroIoC.Core.csproj", "{91B1E643-9F44-4E5A-92BF-B32E7953E9F0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{CA1B04C4-0D34-4A08-A2A7-4AB37EE2E67A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CA1B04C4-0D34-4A08-A2A7-4AB37EE2E67A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CA1B04C4-0D34-4A08-A2A7-4AB37EE2E67A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{91B1E643-9F44-4E5A-92BF-B32E7953E9F0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91B1E643-9F44-4E5A-92BF-B32E7953E9F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91B1E643-9F44-4E5A-92BF-B32E7953E9F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91B1E643-9F44-4E5A-92BF-B32E7953E9F0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

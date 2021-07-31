@@ -44,8 +44,10 @@ namespace ZeroIoC
                 .OfType<InvocationExpressionSyntax>()
                 .ToArray();
 
-            var singletons = new List<(TypeSyntax Interface, TypeSyntax Implmentation)>();
-            var transients = new List<(TypeSyntax Interface, TypeSyntax Implmentation)>();
+            var semantic = context.Compilation.GetSemanticModel(classDeclaration.SyntaxTree);
+            var singletons = new List<(ITypeSymbol Interface, ITypeSymbol Implementation)>();
+            var transients = new List<(ITypeSymbol Interface, ITypeSymbol Implementation)>();
+            var scoped = new List<(ITypeSymbol Interface, ITypeSymbol Implementation)> ();
             foreach (var invocation in invocations)
             {
                 if (invocation.Expression is MemberAccessExpressionSyntax member &&
@@ -54,70 +56,24 @@ namespace ZeroIoC
                     switch (generic.Identifier.Text)
                     {
                         case "AddSingleton":
-                            {
-                                if (generic.TypeArgumentList.Arguments.Count == 1)
-                                {
-                                    var type = generic.TypeArgumentList.Arguments.First();
-                                    singletons.Add((type, type));
-                                }
-
-                                if (generic.TypeArgumentList.Arguments.Count == 2)
-                                {
-                                    var interfaceType = generic.TypeArgumentList.Arguments.First();
-                                    var implementationType = generic.TypeArgumentList.Arguments.Last();
-                                    singletons.Add((interfaceType, implementationType));
-                                }
-                                break;
-                            }
+                            AddTypes(singletons, generic, semantic);
+                            break;
 
                         case "AddTransient":
-                            {
-                                if (generic.TypeArgumentList.Arguments.Count == 1)
-                                {
-                                    var type = generic.TypeArgumentList.Arguments.First();
-                                    transients.Add((type, type));
-                                }
+                            AddTypes(transients, generic, semantic);
+                            break;
 
-                                if (generic.TypeArgumentList.Arguments.Count == 2)
-                                {
-                                    var interfaceType = generic.TypeArgumentList.Arguments.First();
-                                    var implementationType = generic.TypeArgumentList.Arguments.Last();
-                                    transients.Add((interfaceType, implementationType));
-                                }
-                                break;
-                            }
+                        case "AddScoped":
+                            AddTypes(scoped, generic, semantic);
+                            break;
                     }
                 }
             }
 
-            var semantic = context.Compilation.GetSemanticModel(classDeclaration.SyntaxTree);
             var containerType = semantic.GetDeclaredSymbol(classDeclaration);
-            var singletonSymbols = singletons
-                .Select(o =>
-                {
-                    var interfaceSymbol = semantic.GetSpeculativeTypeInfo(o.Interface.SpanStart, o.Interface,
-                        SpeculativeBindingOption.BindAsTypeOrNamespace);
-                    var implementationSymbol = semantic.GetSpeculativeTypeInfo(o.Implmentation.SpanStart,
-                        o.Implmentation, SpeculativeBindingOption.BindAsTypeOrNamespace);
-
-                    return new { Interface = interfaceSymbol.Type!, Implementation = implementationSymbol.Type! };
-                })
-                .ToArray();
-
-            var transientSymbols = transients
-                .Select(o =>
-                {
-                    var interfaceSymbol = semantic.GetSpeculativeTypeInfo(o.Interface.SpanStart, o.Interface,
-                        SpeculativeBindingOption.BindAsTypeOrNamespace);
-                    var implementationSymbol = semantic.GetSpeculativeTypeInfo(o.Implmentation.SpanStart,
-                        o.Implmentation, SpeculativeBindingOption.BindAsTypeOrNamespace);
-
-                    return new { Interface = interfaceSymbol.Type!, Implementation = implementationSymbol.Type! };
-                })
-                .ToArray();
-
             var source = @$"
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using ZeroIoC;
 
@@ -125,17 +81,58 @@ namespace {containerType.ContainingNamespace}
 {{
     public partial class {containerType.Name}
     {{
+
         public {containerType.Name}()
         {{
-        {singletonSymbols.Select(o =>
-$@"        StaticResolvers.Add(typeof({o.Interface.ToGlobalName()}), new SignletonResolver(() => new {o.Implementation.ToGlobalName()}()));").JoinWithNewLine()}
-        {transientSymbols.Select(o =>
-$@"        StaticResolvers.Add(typeof({o.Interface.ToGlobalName()}), new TransientResolver(() => new {o.Implementation.ToGlobalName()}()));").JoinWithNewLine()}
+        {singletons.Select(o =>
+$@"        Resolvers.Add(typeof({o.Interface.ToGlobalName()}), new SignletonResolver(() => new {o.Implementation.ToGlobalName()}()));").JoinWithNewLine()}
+        {transients.Select(o =>
+$@"        Resolvers.Add(typeof({o.Interface.ToGlobalName()}), new TransientResolver(() => new {o.Implementation.ToGlobalName()}()));").JoinWithNewLine()}
+        {scoped.Select(o =>
+$@"        ScopedResolvers.Add(typeof({o.Interface.ToGlobalName()}), new SignletonResolver(() => new {o.Implementation.ToGlobalName()}()));").JoinWithNewLine()}
         }}
+
+        protected {containerType.Name}(Dictionary<Type, InstanceResolver> resolvers, Dictionary<Type, InstanceResolver> scopedResolvers, bool scope = false)
+            : base(resolvers, scopedResolvers, scope)
+        {{
+        }}
+
+         public override IZeroIoCResolver CreateScope()
+         {{
+            var newScope = ScopedResolvers.ToDictionary(o => o.Key, o => o.Value.Duplicate());
+            return new {containerType.Name}(Resolvers, newScope, true);
+         }}
     }}
 }}
 ";
             context.AddSource(classDeclaration.Identifier.Text + "_ZeroIoCContainer", source);
+        }
+
+        private static void AddTypes(List<(ITypeSymbol Interface, ITypeSymbol Implementation)> singletons, GenericNameSyntax generic, SemanticModel semantic)
+        {
+            if (generic.TypeArgumentList.Arguments.Count == 1)
+            {
+                var type = generic.TypeArgumentList.Arguments.First();
+                singletons.Add(ExtractTypeSymbols(type, type));
+            }
+
+            if (generic.TypeArgumentList.Arguments.Count == 2)
+            {
+                var interfaceType = generic.TypeArgumentList.Arguments.First();
+                var implementationType = generic.TypeArgumentList.Arguments.Last();
+                singletons.Add(ExtractTypeSymbols(interfaceType, implementationType));
+            }
+
+            (ITypeSymbol Interface, ITypeSymbol Implementation) ExtractTypeSymbols(TypeSyntax interfaceType, TypeSyntax implementationType)
+            {
+                var interfaceSymbol = semantic.GetSpeculativeTypeInfo(interfaceType.SpanStart, interfaceType,
+                          SpeculativeBindingOption.BindAsTypeOrNamespace);
+                var implementationSymbol = semantic.GetSpeculativeTypeInfo(implementationType.SpanStart,
+                    implementationType, SpeculativeBindingOption.BindAsTypeOrNamespace);
+
+                return (interfaceSymbol.Type!, implementationSymbol.Type!);
+            }
+
         }
 
         public void Initialize(GeneratorInitializationContext context)
@@ -154,9 +151,7 @@ $@"        StaticResolvers.Add(typeof({o.Interface.ToGlobalName()}), new Transie
             {
                 case ClassDeclarationSyntax classDeclaration:
                     if (classDeclaration.BaseList?.Types
-                        .Select(o => o.Type)
-                        .OfType<GenericNameSyntax>()
-                        .Any(o => o.Identifier.Text == "ZeroIoCContainer") ?? false)
+                        .Any(o => o.Type.ToString() == "ZeroIoCContainer") ?? false)
                     {
                         Declarations.Add(classDeclaration);
                     }
