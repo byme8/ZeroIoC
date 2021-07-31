@@ -4,21 +4,21 @@ namespace ZeroIoC
 {
     public interface InstanceResolver : IDisposable
     {
-        object Resolve(object args);
+        object Resolve(IZeroIoCResolver resolver, object args);
 
         InstanceResolver Duplicate();
     }
 
     public sealed class TransientResolver : InstanceResolver
     {
-        private readonly Func<object> activator;
+        private readonly Func<IZeroIoCResolver, object> activator;
 
-        public TransientResolver(Func<object> activator)
+        public TransientResolver(Func<IZeroIoCResolver, object> activator)
         {
             this.activator = activator;
         }
 
-        public object Resolve(object args) => this.activator();
+        public object Resolve(IZeroIoCResolver resolver, object args) => this.activator(resolver);
      
         public InstanceResolver Duplicate() => new TransientResolver(activator);
 
@@ -27,16 +27,16 @@ namespace ZeroIoC
 
     public sealed class SingletonResolver : InstanceResolver
     {
-        private readonly Func<object> activator;
+        private readonly Func<IZeroIoCResolver, object> activator;
         private object cache;
         private bool _disposed;
 
-        public SingletonResolver(Func<object> activator)
+        public SingletonResolver(Func<IZeroIoCResolver, object> activator)
         {
             this.activator = activator;
         }
 
-        public object Resolve(object args)
+        public object Resolve(IZeroIoCResolver resolver, object args)
         {
             if (cache is null)
             {
@@ -44,7 +44,7 @@ namespace ZeroIoC
                 {
                     if (cache is null)
                     {
-                        cache = this.activator();
+                        cache = this.activator(resolver);
                         return cache;
                     }
                 }

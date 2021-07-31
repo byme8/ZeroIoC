@@ -39,7 +39,7 @@ namespace ZeroIoC
                 }
             }
 
-            return resolver.Resolve(null);
+            return resolver.Resolve(this, null);
         }
 
         public void Merge(ZeroIoCContainer container)
@@ -55,14 +55,14 @@ namespace ZeroIoC
             }
         }
 
-        public void AddDelegate<TValue>(Func<TValue> action)
+        public void AddDelegate<TValue>(Func<IZeroIoCResolver, TValue> action)
         {
-            Resolvers.Add(typeof(TValue), new SingletonResolver(() => action()));
+            Resolvers.Add(typeof(TValue), new SingletonResolver(o => action(o)));
         }
         
         public void AddInstance<TValue>(TValue value)
         {
-            Resolvers.Add(typeof(TValue), new SingletonResolver(() => value));
+            Resolvers.Add(typeof(TValue), new SingletonResolver(o => value));
         }
 
         public void Dispose()

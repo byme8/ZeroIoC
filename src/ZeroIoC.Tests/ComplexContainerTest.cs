@@ -117,9 +117,9 @@ namespace ZeroIoC.Tests
 
             var serviceContainer = (ZeroIoCContainer)Activator.CreateInstance(serviceContainerType);
             var repositoryContainer = (ZeroIoCContainer)Activator.CreateInstance(repositoryContainerType);
-            serviceContainer.Merge(repositoryContainer);
+            repositoryContainer.Merge(serviceContainer);
             
-            var service = serviceContainer.Resolve(serviceType);
+            var service = repositoryContainer.Resolve(serviceType);
 
             Assert.IsNotNull(service);
         }
@@ -159,7 +159,7 @@ namespace ZeroIoC.Tests
             var serviceType = assembly.GetType("TestProject.IService");
 
             var container = (ZeroIoCContainer)Activator.CreateInstance(containerType);
-            container.AddDelegate(() => Guid.NewGuid().ToString());
+            container.AddDelegate(o => Guid.NewGuid().ToString());
             var service = container.Resolve(serviceType);
 
             Assert.IsNotNull(service);

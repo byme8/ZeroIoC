@@ -122,8 +122,8 @@ $@"        ScopedResolvers.Add(typeof({o.Interface.ToGlobalName()}), new Singlet
 
             var constructor = members.First();
             var arguments = constructor.Parameters.Select(o => o.Type).ToArray();
-            var argumentsText = arguments.Select(o => $"this.Resolve<{o.ToGlobalName()}>()");
-            return $"() => new {typeSymbol.ToGlobalName()}({argumentsText.Join()})";
+            var argumentsText = arguments.Select(o => $"resolver.Resolve<{o.ToGlobalName()}>()");
+            return $"static resolver => new {typeSymbol.ToGlobalName()}({argumentsText.Join()})";
         }
 
         private static void AddTypes(List<(ITypeSymbol Interface, ITypeSymbol Implementation)> singletons, GenericNameSyntax generic, SemanticModel semantic)
