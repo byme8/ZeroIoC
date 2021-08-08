@@ -1,13 +1,16 @@
-﻿using System;
+﻿using ImTools;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using ZeroIoC.Core;
 
 namespace ZeroIoC
 {
     public abstract class ZeroIoCContainer : IZeroIoCResolver
     {
-        protected Dictionary<Type, InstanceResolver> Resolvers = new Dictionary<Type, InstanceResolver>();
-        protected Dictionary<Type, InstanceResolver> ScopedResolvers = new Dictionary<Type, InstanceResolver>();
+        protected ImTools.ImHashMap<Type, InstanceResolver> Resolvers = ImTools.ImHashMap<Type, InstanceResolver>.Empty;
+        protected ImTools.ImHashMap<Type, InstanceResolver> ScopedResolvers = ImTools.ImHashMap<Type, InstanceResolver>.Empty;
         protected bool Scoped = false;
 
         protected abstract void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper);
@@ -17,7 +20,7 @@ namespace ZeroIoC
 
         }
 
-        protected ZeroIoCContainer(Dictionary<Type, InstanceResolver> resolvers, Dictionary<Type, InstanceResolver> scopedResolvers, bool scope = false)
+        protected ZeroIoCContainer(ImHashMap<Type, InstanceResolver> resolvers, ImTools.ImHashMap<Type, InstanceResolver> scopedResolvers, bool scope = false)
         {
             Resolvers = resolvers;
             ScopedResolvers = scopedResolvers;
@@ -26,55 +29,62 @@ namespace ZeroIoC
 
         public object Resolve(Type type)
         {
-            if (!Resolvers.TryGetValue(type, out var resolver))
+            var entry = Resolvers.GetValueOrDefault(type.GetHashCode(), type);
+            if (entry is null)
             {
-                if (ScopedResolvers.TryGetValue(type, out resolver) && !Scoped)
+                if (Scoped)
                 {
-                    throw new ScopedWithoutScopeException($"Type {type.FullName} is registred as scoped, but you are trying to create it without scope.");
+                    entry = ScopedResolvers.GetValueOrDefault(type.GetHashCode(), type);
                 }
 
-                if (resolver is null)
+                if (entry is null)
                 {
-                    throw new ServiceIsNotRegistred($"Type {type.FullName} is missing in resolver.");
+                    entry = ScopedResolvers.GetValueOrDefault(type.GetHashCode(), type);
+                    if (entry != null)
+                    {
+                        ExceptionHelper.ScopedWithoutScopeException(type.FullName);
+                    }
+
+                    ExceptionHelper.ServiceIsNotRegistred(type.FullName);
                 }
             }
 
-            return resolver.Resolve(this, null);
+            return entry.Resolve(this);
         }
 
         public void Merge(ZeroIoCContainer container)
         {
-            foreach (var resolver in container.Resolvers)
+            foreach (var resolver in container.Resolvers.Enumerate())
             {
-                Resolvers.Add(resolver.Key, resolver.Value);
+                Resolvers = Resolvers.AddOrUpdate(resolver.Key, resolver.Value);
             }
-            
-            foreach (var resolver in container.ScopedResolvers)
+
+            foreach (var resolver in container.ScopedResolvers.Enumerate())
             {
-                ScopedResolvers.Add(resolver.Key, resolver.Value);
+                ScopedResolvers = ScopedResolvers.AddOrUpdate(resolver.Key, resolver.Value);
             }
         }
 
         public void AddDelegate<TValue>(Func<IZeroIoCResolver, TValue> action)
         {
-            Resolvers.Add(typeof(TValue), new SingletonResolver(o => action(o)));
+            Resolvers = Resolvers.AddOrUpdate(typeof(TValue), new SingletonResolver(o => action(o)));
         }
-        
+
         public void AddInstance<TValue>(TValue value)
         {
-            Resolvers.Add(typeof(TValue), new SingletonResolver(o => value));
+            Resolvers = Resolvers.AddOrUpdate(typeof(TValue), new SingletonResolver(o => value));
         }
 
         public void Dispose()
         {
-            foreach (var resolver in Resolvers.Values)
+            foreach (var resolver in Resolvers.Enumerate())
             {
-                resolver.Dispose();
+                resolver.Value.Dispose();
             }
-            
-            foreach (var resolver in ScopedResolvers.Values)
+
+            foreach (var resolver in ScopedResolvers.Enumerate())
             {
-                resolver.Dispose();
+                resolver.Value.Dispose();
             }
         }
 

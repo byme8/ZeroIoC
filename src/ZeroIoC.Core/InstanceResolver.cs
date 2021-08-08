@@ -4,7 +4,7 @@ namespace ZeroIoC
 {
     public interface InstanceResolver : IDisposable
     {
-        object Resolve(IZeroIoCResolver resolver, object args);
+        object Resolve(IZeroIoCResolver resolver);
 
         InstanceResolver Duplicate();
     }
@@ -18,8 +18,8 @@ namespace ZeroIoC
             this.activator = activator;
         }
 
-        public object Resolve(IZeroIoCResolver resolver, object args) => this.activator(resolver);
-     
+        public object Resolve(IZeroIoCResolver resolver) => this.activator(resolver);
+
         public InstanceResolver Duplicate() => new TransientResolver(activator);
 
         public void Dispose() { }
@@ -28,43 +28,45 @@ namespace ZeroIoC
     public sealed class SingletonResolver : InstanceResolver
     {
         private readonly Func<IZeroIoCResolver, object> activator;
+        private Func<IZeroIoCResolver, object> resolve;
         private object cache;
-        private bool _disposed;
+        private bool disposed;
 
         public SingletonResolver(Func<IZeroIoCResolver, object> activator)
         {
             this.activator = activator;
+            this.cache = null;
+            this.disposed = false;
+
+            this.resolve = this.ResolveInternal;
         }
 
-        public object Resolve(IZeroIoCResolver resolver, object args)
+        private object ResolveInternal(IZeroIoCResolver resolver)
         {
-            if (cache is null)
+            lock (activator)
             {
-                lock (this)
-                {
-                    if (cache is null)
-                    {
-                        cache = this.activator(resolver);
-                        return cache;
-                    }
-                }
+                this.cache = this.activator(resolver);
+                this.resolve = this.GetCached;
+                return cache;
             }
-
-            return cache;
         }
+
+        private object GetCached(IZeroIoCResolver resolver) => this.cache;
+
+        public object Resolve(IZeroIoCResolver resolver) => this.resolve(resolver);
 
         public InstanceResolver Duplicate() => new SingletonResolver(activator);
 
         public void Dispose()
         {
-            if (_disposed)
+            if (disposed)
             {
                 throw new ObjectDisposedException("Instance resolver was disposed. It may happen because the scope was disposed.");
             }
 
             if (cache != null && cache is IDisposable disposable)
             {
-                _disposed = true;
+                disposed = true;
                 disposable.Dispose();
             }
         }

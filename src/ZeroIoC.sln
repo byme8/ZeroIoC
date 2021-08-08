@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZeroIoC.SourceGenerator", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZeroIoC.Tests", "ZeroIoC.Tests\ZeroIoC.Tests.csproj", "{0090F938-F627-4778-9308-9A61302C8930}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZeroIoC.Sample", "ZeroIoC.Sample\ZeroIoC.Sample.csproj", "{CA1B04C4-0D34-4A08-A2A7-4AB37EE2E67A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZeroIoC.Benchmarks", "ZeroIoC.Benchmarks\ZeroIoC.Benchmarks.csproj", "{CA1B04C4-0D34-4A08-A2A7-4AB37EE2E67A}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZeroIoC.Core", "ZeroIoC.Core\ZeroIoC.Core.csproj", "{91B1E643-9F44-4E5A-92BF-B32E7953E9F0}"
 EndProject

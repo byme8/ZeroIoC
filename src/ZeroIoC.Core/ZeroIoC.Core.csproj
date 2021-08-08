@@ -5,4 +5,8 @@
     <Description>Contains core APIs for ZeroIoC.</Description>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="ImTools.dll" Version="3.1.0" />
+  </ItemGroup>
+
 </Project>

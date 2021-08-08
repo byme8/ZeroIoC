@@ -36,6 +36,7 @@ namespace ZeroIoC.Tests.Data
                 MetadataReference.CreateFromFile(typeof(Attribute).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(ArrayPool<>).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(ZeroIoCContainer).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(ImTools.Hasher).Assembly.Location),
             };
         }
 

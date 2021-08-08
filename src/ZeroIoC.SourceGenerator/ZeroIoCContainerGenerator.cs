@@ -76,6 +76,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using ZeroIoC;
+using ImTools;
 
 namespace {containerType.ContainingNamespace}
 {{
@@ -85,21 +86,25 @@ namespace {containerType.ContainingNamespace}
         public {containerType.Name}()
         {{
         {singletons.Select(o =>
-$@"        Resolvers.Add(typeof({o.Interface.ToGlobalName()}), new SingletonResolver({ResolveConstructor(o.Implementation)}));").JoinWithNewLine()}
+$@"        Resolvers = Resolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new SingletonResolver({ResolveConstructor(o.Implementation)}));").JoinWithNewLine()}
         {transients.Select(o =>
-$@"        Resolvers.Add(typeof({o.Interface.ToGlobalName()}), new TransientResolver({ResolveConstructor(o.Implementation)}));").JoinWithNewLine()}
+$@"        Resolvers = Resolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new TransientResolver({ResolveConstructor(o.Implementation)}));").JoinWithNewLine()}
         {scoped.Select(o =>
-$@"        ScopedResolvers.Add(typeof({o.Interface.ToGlobalName()}), new SingletonResolver({ResolveConstructor(o.Implementation)}));").JoinWithNewLine()}
+$@"        ScopedResolvers = ScopedResolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new SingletonResolver({ResolveConstructor(o.Implementation)}));").JoinWithNewLine()}
         }}
 
-        protected {containerType.Name}(Dictionary<Type, InstanceResolver> resolvers, Dictionary<Type, InstanceResolver> scopedResolvers, bool scope = false)
+        protected {containerType.Name}(ImTools.ImHashMap<Type, InstanceResolver> resolvers, ImTools.ImHashMap<Type, InstanceResolver> scopedResolvers, bool scope = false)
             : base(resolvers, scopedResolvers, scope)
         {{
         }}
 
          public override IZeroIoCResolver CreateScope()
          {{
-            var newScope = ScopedResolvers.ToDictionary(o => o.Key, o => o.Value.Duplicate());
+
+            var newScope = ScopedResolvers
+                .Enumerate()
+                .Aggregate(ImHashMap<Type, InstanceResolver>.Empty, (acc, o) => acc.AddOrUpdate(o.Key, o.Value.Duplicate()));
+            
             return new {containerType.Name}(Resolvers, newScope, true);
          }}
     }}
