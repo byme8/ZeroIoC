@@ -90,11 +90,11 @@ But If you want to do something at runtime you can do it like that:
 var container = new Container();
 if(Config.Release)
 {
-    container.AddInstance<IHelper, ReleaseHelper>();
+    container.AddInstance<IHelper>(new ReleaseHelper());
 }
 else 
 {
-    container.AddInstance<IHelper, DebugHelper>();
+    container.AddInstance<IHelper>(new DebugHelper());
 }
 
 var userService = container.Resolve<IUserService>();
