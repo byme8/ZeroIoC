@@ -18,23 +18,26 @@ jobs:
       with:
         dotnet-version: 5.0.x
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore ./src
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build --no-restore -c release ./src
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test --no-build --verbosity normal -c release ./src
     - name: Publish ZeroIoC.Core NuGet
       uses: brandedoutcast/publish-nuget@v2.5.5
       with:
-        PROJECT_FILE_PATH: /src/ZeroIoC.Core/ZeroIoC.Core.csproj
-        NUGET_KEY: oy2bxqn6fyrtrbvigtda4hzubq7y5r2edhkfz63ynupxga
+        PROJECT_FILE_PATH: ./src/ZeroIoC.Core/ZeroIoC.Core.csproj
+        VERSION_FILE_PATH: ./src/Directory.Build.props
+        NUGET_KEY: ${{ secrets.NUGET_KEY }}
     - name: Publish ZeroIoC.SourceGenerator NuGet
       uses: brandedoutcast/publish-nuget@v2.5.5
       with:
-        PROJECT_FILE_PATH: /src/ZeroIoC.SourceGenerator/ZeroIoC.SourceGenerator.csproj
-        NUGET_KEY: oy2bxqn6fyrtrbvigtda4hzubq7y5r2edhkfz63ynupxga
+        PROJECT_FILE_PATH: ./src/ZeroIoC.SourceGenerator/ZeroIoC.SourceGenerator.csproj
+        VERSION_FILE_PATH: ./src/Directory.Build.props
+        NUGET_KEY: ${{ secrets.NUGET_KEY }}
     - name: Publish ZeroIoC NuGet
       uses: brandedoutcast/publish-nuget@v2.5.5
       with:
-        PROJECT_FILE_PATH: /src/ZeroIoC/ZeroIoC.csproj
-        NUGET_KEY: oy2bxqn6fyrtrbvigtda4hzubq7y5r2edhkfz63ynupxga
+        PROJECT_FILE_PATH: ./src/ZeroIoC/ZeroIoC.csproj
+        VERSION_FILE_PATH: ./src/Directory.Build.props
+        NUGET_KEY: ${{ secrets.NUGET_KEY }}
