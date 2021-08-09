@@ -58,10 +58,45 @@ This set contains:
 - Powered by source generation to avoid reflection and Reflection.Emit => can be used inside the AOT Xamarin/Unity app.
 - Fast enough with minimal overhead => the end-user of the Xamarin app will not notice a difference.
 
+# How it works
+
+The nuget ships with the source generator and analyzer. The source generator looks for class declarations that are inherited from the ``` ZeroIoCContainer ```.Inside the generator looks for the ``` ZeroIoCContainer.Bootstrap ``` method. Based on its content the source generator will generate an another part of a partial class. For the case described above it will look like that:
+
+``` cs
+
+public partial class Container
+{
+
+    public Container()
+    {
+        Resolvers = Resolvers.AddOrUpdate(typeof(global::Helper), new SingletonResolver(static resolver => new global::Helper()));
+        Resolvers = Resolvers.AddOrUpdate(typeof(global::IUserService), new TransientResolver(static resolver => new global::UserService(resolver.Resolve<global::Helper>())));
+    }
+
+    protected Container(ImTools.ImHashMap<Type, InstanceResolver> resolvers, ImTools.ImHashMap<Type, InstanceResolver> scopedResolvers, bool scope = false)
+        : base(resolvers, scopedResolvers, scope)
+    {
+    }
+
+    public override IZeroIoCResolver CreateScope()
+    {
+        var newScope = ScopedResolvers
+            .Enumerate()
+            .Aggregate(ImHashMap<Type, InstanceResolver>.Empty, (acc, o) => acc.AddOrUpdate(o.Key, o.Value.Duplicate()));
+        
+        return new Container(Resolvers, newScope, true);
+    }
+}
+
+```
+
+It is pretty simple stuff. The whole logic is based on a dictionary with ``` Type ``` as a key and instance resolver as a value. Such a class will be generated for each separate class declaration and because there is no static logic you can safely define as many containers as you like.
+
+
 # Limitations
 
 Let's talk about the ``` ZeroIoCContainer.Bootstrap ``` method. It is not an ordinary method. It is a magic one.
-it allows you to define the relations between interface and implementation but it will never be executed at runtime.
+It allows you to define the relations between interface and implementation but it will never be executed at runtime.
 The ``` ZeroIoCContainer.Bootstrap ``` is just a declaration that will be parsed by source generation and based on it the mapping will be generated.
 It means that there is no point to use statements like that:
 ``` cs
