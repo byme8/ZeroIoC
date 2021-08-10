@@ -45,6 +45,11 @@ namespace ZeroIoC
         {
             lock (activator)
             {
+                if(this.cache != null)
+                {
+                    return cache;
+                }
+
                 this.cache = this.activator(resolver);
                 this.resolve = this.GetCached;
                 return cache;
