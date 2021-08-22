@@ -104,6 +104,11 @@ namespace ZeroIoC
         {
             return symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         }
+        
+        public static string ToCreatorName(this ISymbol symbol)
+        {
+            return symbol.ToGlobalName().Replace(".", "_").Replace("global::", "") + "Creator";
+        }
 
         public static string Join(this IEnumerable<string> values, string separator = ", ")
         {

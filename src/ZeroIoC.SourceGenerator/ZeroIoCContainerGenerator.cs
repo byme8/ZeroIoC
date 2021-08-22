@@ -69,7 +69,8 @@ namespace ZeroIoC
                     }
                 }
             }
-
+            
+            var set = new HashSet<string>(transients.Select(o => o.Interface.ToGlobalName()));
             var containerType = semantic.GetDeclaredSymbol(classDeclaration);
             var source = @$"
 using System;
@@ -80,30 +81,40 @@ using ImTools;
 
 namespace {containerType.ContainingNamespace}
 {{
-    public partial class {containerType.Name}
+    public sealed partial class {containerType.Name}
     {{
+
+{singletons.Concat(transients).Concat(scoped)
+    .Select(o => $@"
+        private struct {o.Interface.ToCreatorName()} : ICreator<{o.Interface.ToGlobalName()}>
+        {{
+            public {o.Interface.ToGlobalName()} Create(IZeroIoCResolver resolver)
+            {{
+                return {ResolveConstructor(o.Implementation, set)};
+            }}
+        }}")
+    .JoinWithNewLine()}
 
         public {containerType.Name}()
         {{
         {singletons.Select(o =>
-$@"        Resolvers = Resolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new SingletonResolver({ResolveConstructor(o.Implementation)}));").JoinWithNewLine()}
+$@"        Resolvers = Resolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new SingletonResolver<{o.Interface.ToCreatorName()}, {o.Interface.ToGlobalName()}>());").JoinWithNewLine()}
         {transients.Select(o =>
-$@"        Resolvers = Resolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new TransientResolver({ResolveConstructor(o.Implementation)}));").JoinWithNewLine()}
+$@"        Resolvers = Resolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new TransientResolver<{o.Interface.ToCreatorName()}, {o.Interface.ToGlobalName()}>());").JoinWithNewLine()}
         {scoped.Select(o =>
-$@"        ScopedResolvers = ScopedResolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new SingletonResolver({ResolveConstructor(o.Implementation)}));").JoinWithNewLine()}
+$@"        ScopedResolvers = ScopedResolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new SingletonResolver<{o.Interface.ToCreatorName()}, {o.Interface.ToGlobalName()}>());").JoinWithNewLine()}
         }}
 
-        protected {containerType.Name}(ImTools.ImHashMap<Type, InstanceResolver> resolvers, ImTools.ImHashMap<Type, InstanceResolver> scopedResolvers, bool scope = false)
+        protected {containerType.Name}(ImTools.ImHashMap<Type, IInstanceResolver> resolvers, ImTools.ImHashMap<Type, IInstanceResolver> scopedResolvers, bool scope = false)
             : base(resolvers, scopedResolvers, scope)
         {{
         }}
 
          public override IZeroIoCResolver CreateScope()
          {{
-
             var newScope = ScopedResolvers
                 .Enumerate()
-                .Aggregate(ImHashMap<Type, InstanceResolver>.Empty, (acc, o) => acc.AddOrUpdate(o.Key, o.Value.Duplicate()));
+                .Aggregate(ImHashMap<Type, IInstanceResolver>.Empty, (acc, o) => acc.AddOrUpdate(o.Key, o.Value.Duplicate()));
             
             return new {containerType.Name}(Resolvers, newScope, true);
          }}
@@ -113,7 +124,7 @@ $@"        ScopedResolvers = ScopedResolvers.AddOrUpdate(typeof({o.Interface.ToG
             context.AddSource(classDeclaration.Identifier.Text + "_ZeroIoCContainer", source);
         }
 
-        private static string ResolveConstructor(ITypeSymbol typeSymbol)
+        private static string ResolveConstructor(ITypeSymbol typeSymbol, HashSet<string> transients)
         {
             var members = typeSymbol.GetMembers()
                 .OfType<IMethodSymbol>()
@@ -127,8 +138,8 @@ $@"        ScopedResolvers = ScopedResolvers.AddOrUpdate(typeof({o.Interface.ToG
 
             var constructor = members.First();
             var arguments = constructor.Parameters.Select(o => o.Type).ToArray();
-            var argumentsText = arguments.Select(o => $"resolver.Resolve<{o.ToGlobalName()}>()");
-            return $"static resolver => new {typeSymbol.ToGlobalName()}({argumentsText.Join()})";
+            var argumentsText = arguments.Select(o => transients.Contains(o.ToGlobalName()) ? $"default({o.ToCreatorName()}).Create(resolver)"  : $"resolver.Resolve<{o.ToGlobalName()}>()");
+            return $"new {typeSymbol.ToGlobalName()}({argumentsText.Join()})";
         }
 
         private static void AddTypes(List<(ITypeSymbol Interface, ITypeSymbol Implementation)> singletons, GenericNameSyntax generic, SemanticModel semantic)

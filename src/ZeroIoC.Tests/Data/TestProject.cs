@@ -18,9 +18,8 @@ namespace ZeroIoC.Tests.Data
             Project = workspace
                 .AddProject("TestProject", LanguageNames.CSharp)
                 .WithMetadataReferences(GetReferences())
-                .AddDocument("Program.cs", ProgramCS).Project;
+                .AddDocument("Program.cs", ProgramCs).Project;
         }
-
 
         private static MetadataReference[] GetReferences()
         {
@@ -40,7 +39,7 @@ namespace ZeroIoC.Tests.Data
             };
         }
 
-        public const string ProgramCS = @"
+        public const string ProgramCs = @"
 using System;
 using ZeroIoC;
 

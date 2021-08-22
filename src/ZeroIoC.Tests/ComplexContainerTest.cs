@@ -44,8 +44,8 @@ namespace ZeroIoC.Tests
         {
             protected override void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper)
             {
-                bootstrapper.AddSingleton<IRepository, Repository>();
-                bootstrapper.AddSingleton<IService, Service>();
+                bootstrapper.AddTransient<IRepository, Repository>();
+                bootstrapper.AddTransient<IService, Service>();
             }
         }
 ");
@@ -60,7 +60,7 @@ namespace ZeroIoC.Tests
             var firstService = container.Resolve(serviceType);
             var secondService = container.Resolve(serviceType);
 
-            Assert.IsTrue(firstService != null && secondService != null && firstService.Equals(secondService));
+            Assert.IsTrue(firstService != null && secondService != null && !firstService.Equals(secondService));
         }
         
         [TestMethod]

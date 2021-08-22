@@ -9,18 +9,21 @@ namespace ZeroIoC
 {
     public abstract class ZeroIoCContainer : IZeroIoCResolver
     {
-        protected ImTools.ImHashMap<Type, InstanceResolver> Resolvers = ImTools.ImHashMap<Type, InstanceResolver>.Empty;
-        protected ImTools.ImHashMap<Type, InstanceResolver> ScopedResolvers = ImTools.ImHashMap<Type, InstanceResolver>.Empty;
+        protected ImHashMap<Type, IInstanceResolver> Resolvers = ImHashMap<Type, IInstanceResolver>.Empty;
+
+        protected ImHashMap<Type, IInstanceResolver> ScopedResolvers =
+            ImHashMap<Type, IInstanceResolver>.Empty;
+
         protected bool Scoped = false;
 
         protected abstract void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper);
 
         protected ZeroIoCContainer()
         {
-
         }
 
-        protected ZeroIoCContainer(ImHashMap<Type, InstanceResolver> resolvers, ImTools.ImHashMap<Type, InstanceResolver> scopedResolvers, bool scope = false)
+        protected ZeroIoCContainer(ImHashMap<Type, IInstanceResolver> resolvers,
+            ImHashMap<Type, IInstanceResolver> scopedResolvers, bool scope = false)
         {
             Resolvers = resolvers;
             ScopedResolvers = scopedResolvers;
@@ -30,26 +33,29 @@ namespace ZeroIoC
         public object Resolve(Type type)
         {
             var entry = Resolvers.GetValueOrDefault(type.GetHashCode(), type);
-            if (entry is null)
+            if (entry != null)
             {
-                if (Scoped)
-                {
-                    entry = ScopedResolvers.GetValueOrDefault(type.GetHashCode(), type);
-                }
-
-                if (entry is null)
-                {
-                    entry = ScopedResolvers.GetValueOrDefault(type.GetHashCode(), type);
-                    if (entry != null)
-                    {
-                        ExceptionHelper.ScopedWithoutScopeException(type.FullName);
-                    }
-
-                    ExceptionHelper.ServiceIsNotRegistred(type.FullName);
-                }
+                return entry.Resolve(this);
             }
 
-            return entry.Resolve(this);
+            if (Scoped)
+            {
+                entry = ScopedResolvers.GetValueOrDefault(type.GetHashCode(), type);
+            }
+
+            if (entry != null)
+            {
+                return entry.Resolve(this);
+            }
+
+            entry = ScopedResolvers.GetValueOrDefault(type.GetHashCode(), type);
+            if (entry != null)
+            {
+                ExceptionHelper.ScopedWithoutScopeException(type.FullName);
+            }
+
+            ExceptionHelper.ServiceIsNotRegistred(type.FullName);
+            return null;
         }
 
         public void Merge(ZeroIoCContainer container)

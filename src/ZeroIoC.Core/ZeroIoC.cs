@@ -11,7 +11,6 @@ namespace ZeroIoC
 
     public interface IZeroIoCContainerBootstrapper
     {
-
         void AddTransient<TImplementation>();
         void AddTransient<TInterface, TImplementation>();
         void AddSingleton<TImplementation>();
