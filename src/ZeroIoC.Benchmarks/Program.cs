@@ -89,6 +89,6 @@ namespace ZeroIoC.Benchmarks
         public SingleService ZeroSingleton() => (SingleService)_zeroioc.Resolve(typeof(SingleService));
 
         [Benchmark]
-        public SingleService GraceSingleService() => (SingleService)_grace.Locate(typeof(SingleService));
+        public SingleService GraceSingleton() => (SingleService)_grace.Locate(typeof(SingleService));
     }
 }

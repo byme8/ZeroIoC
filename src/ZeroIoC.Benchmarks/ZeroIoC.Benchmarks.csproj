@@ -2,14 +2,8 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="C:\Users\silin\.nuget\packages\dryioc\4.8.1\contentFiles\cs\netstandard2.0\DryIoc\Container.cs" />
-    <Compile Remove="C:\Users\silin\.nuget\packages\dryioc\4.8.1\contentFiles\cs\netstandard2.0\DryIoc\Expression.cs" />
-    <Compile Remove="C:\Users\silin\.nuget\packages\dryioc\4.8.1\contentFiles\cs\netstandard2.0\DryIoc\FastExpressionCompiler.cs" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.13.0" />

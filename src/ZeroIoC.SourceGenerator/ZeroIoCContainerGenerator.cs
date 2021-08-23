@@ -97,12 +97,9 @@ namespace {containerType.ContainingNamespace}
 
         public {containerType.Name}()
         {{
-        {singletons.Select(o =>
-$@"        Resolvers = Resolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new SingletonResolver<{o.Interface.ToCreatorName()}, {o.Interface.ToGlobalName()}>());").JoinWithNewLine()}
-        {transients.Select(o =>
-$@"        Resolvers = Resolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new TransientResolver<{o.Interface.ToCreatorName()}, {o.Interface.ToGlobalName()}>());").JoinWithNewLine()}
-        {scoped.Select(o =>
-$@"        ScopedResolvers = ScopedResolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new SingletonResolver<{o.Interface.ToCreatorName()}, {o.Interface.ToGlobalName()}>());").JoinWithNewLine()}
+{singletons.Select(o =>$@"            Resolvers = Resolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new SingletonResolver<{o.Interface.ToCreatorName()}, {o.Interface.ToGlobalName()}>());").JoinWithNewLine()}
+{transients.Select(o =>$@"            Resolvers = Resolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new TransientResolver<{o.Interface.ToCreatorName()}, {o.Interface.ToGlobalName()}>());").JoinWithNewLine()}
+{scoped.Select(o =>$@"            ScopedResolvers = ScopedResolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new SingletonResolver<{o.Interface.ToCreatorName()}, {o.Interface.ToGlobalName()}>());").JoinWithNewLine()}
         }}
 
         protected {containerType.Name}(ImTools.ImHashMap<Type, IInstanceResolver> resolvers, ImTools.ImHashMap<Type, IInstanceResolver> scopedResolvers, bool scope = false)
