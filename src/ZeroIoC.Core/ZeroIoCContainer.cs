@@ -58,6 +58,35 @@ namespace ZeroIoC
             return null;
         }
 
+        public IEnumerable<object> ResolveMany(Type type)
+        {
+            var enumarableType = typeof(IEnumerable<>).MakeGenericType(type);
+            var entry = Resolvers.GetValueOrDefault(enumarableType.GetHashCode(), type);
+            if (entry != null)
+            {
+                return (IEnumerable<object>)entry;
+            }
+
+            if (Scoped)
+            {
+                entry = ScopedResolvers.GetValueOrDefault(type.GetHashCode(), type);
+            }
+
+            if (entry != null)
+            {
+                return (IEnumerable<object>)entry;
+            }
+
+            entry = ScopedResolvers.GetValueOrDefault(type.GetHashCode(), type);
+            if (entry != null)
+            {
+                ExceptionHelper.ScopedWithoutScopeException(type.FullName);
+            }
+
+            ExceptionHelper.ServiceIsNotRegistred(type.FullName);
+            return null;
+        }
+
         public void Merge(ZeroIoCContainer container)
         {
             foreach (var resolver in container.Resolvers.Enumerate())
@@ -71,9 +100,9 @@ namespace ZeroIoC
             }
         }
 
-        public void AddDelegate<TValue>(Func<IZeroIoCResolver, TValue> action)
+        public void AddDelegate(Func<IZeroIoCResolver, object> resolver, Type interfaceType)
         {
-            Resolvers = Resolvers.AddOrUpdate(typeof(TValue), new SingletonResolver(o => action(o)));
+            Resolvers = Resolvers.AddOrUpdate(interfaceType, new TransientResolver(o => resolver(o)));
         }
 
         public void AddInstance<TValue>(TValue value)

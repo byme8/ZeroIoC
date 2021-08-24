@@ -27,7 +27,7 @@ namespace ZeroIoC
             }
         }
 
-        private static void GenerateContainer(GeneratorExecutionContext context, ClassDeclarationSyntax classDeclaration)
+        private void GenerateContainer(GeneratorExecutionContext context, ClassDeclarationSyntax classDeclaration)
         {
             var bootstrapMethod = classDeclaration
                             .DescendantNodes()
@@ -45,9 +45,8 @@ namespace ZeroIoC
                 .ToArray();
 
             var semantic = context.Compilation.GetSemanticModel(classDeclaration.SyntaxTree);
-            var singletons = new List<(ITypeSymbol Interface, ITypeSymbol Implementation)>();
-            var transients = new List<(ITypeSymbol Interface, ITypeSymbol Implementation)>();
-            var scoped = new List<(ITypeSymbol Interface, ITypeSymbol Implementation)>();
+
+            var entries = new List<ServiceEntry>();
             foreach (var invocation in invocations)
             {
                 if (invocation.Expression is MemberAccessExpressionSyntax member &&
@@ -56,21 +55,28 @@ namespace ZeroIoC
                     switch (generic.Identifier.Text)
                     {
                         case "AddSingleton":
-                            AddTypes(singletons, generic, semantic);
+                            AddTypes(entries, ServiceEntry.LifetimeKind.Singleton, generic, semantic);
                             break;
 
                         case "AddTransient":
-                            AddTypes(transients, generic, semantic);
+                            AddTypes(entries, ServiceEntry.LifetimeKind.Transient, generic, semantic);
                             break;
 
                         case "AddScoped":
-                            AddTypes(scoped, generic, semantic);
+                            AddTypes(entries, ServiceEntry.LifetimeKind.Scoped, generic, semantic);
                             break;
                     }
                 }
             }
-            
-            var set = new HashSet<string>(transients.Select(o => o.Interface.ToGlobalName()));
+
+            var groupedEntries = entries
+                .GroupBy(o => o.Interface)
+                .ToArray();
+
+            var transients = new HashSet<string>(entries
+                .Where(o => o.Lifetime == ServiceEntry.LifetimeKind.Transient)
+                .Select(o => o.Interface.ToGlobalName()));
+
             var containerType = semantic.GetDeclaredSymbol(classDeclaration);
             var source = @$"
 using System;
@@ -84,41 +90,86 @@ namespace {containerType.ContainingNamespace}
     public sealed partial class {containerType.Name}
     {{
 
-{singletons.Concat(transients).Concat(scoped)
+{groupedEntries
     .Select(o => $@"
-        private struct {o.Interface.ToCreatorName()} : ICreator<{o.Interface.ToGlobalName()}>
+
+        private struct {o.First().Interface.ToCreatorName()} : ICreator<{o.First().Interface.ToGlobalName()}>
         {{
-            public {o.Interface.ToGlobalName()} Create(IZeroIoCResolver resolver)
+            public {o.First().Interface.ToGlobalName()} Create(IZeroIoCResolver resolver)
             {{
-                return {ResolveConstructor(o.Implementation, set)};
+                return {ResolveConstructor(o.First().Implementation, transients)};
             }}
-        }}")
+        }}
+
+{(o.Count() == 1 ? string.Empty : $@"
+
+        private struct {o.First().Interface.ToCreatorName()}_Enumerable : ICreator<IEnumerable<{o.First().Interface.ToGlobalName()}>>
+        {{
+            public IEnumerable<{o.First().Interface.ToGlobalName()}> Create(IZeroIoCResolver resolver)
+            {{
+                return new [] {{ {o.Select(oo => ResolveConstructor(oo.Implementation, transients)).Join()} }};
+            }}
+        }}
+
+"
+)}
+
+")
     .JoinWithNewLine()}
 
         public {containerType.Name}()
         {{
-{singletons.Select(o =>$@"            Resolvers = Resolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new SingletonResolver<{o.Interface.ToCreatorName()}, {o.Interface.ToGlobalName()}>());").JoinWithNewLine()}
-{transients.Select(o =>$@"            Resolvers = Resolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new TransientResolver<{o.Interface.ToCreatorName()}, {o.Interface.ToGlobalName()}>());").JoinWithNewLine()}
-{scoped.Select(o =>$@"            ScopedResolvers = ScopedResolvers.AddOrUpdate(typeof({o.Interface.ToGlobalName()}), new SingletonResolver<{o.Interface.ToCreatorName()}, {o.Interface.ToGlobalName()}>());").JoinWithNewLine()}
+{groupedEntries.Select(o =>
+    {
+        if (o.Count() == 1)
+        {
+            var entry = o.First();
+            var (propertyToStore, resolver) = MapResolver(entry);
+
+            return $@"
+            {propertyToStore} = {propertyToStore}.AddOrUpdate(typeof({entry.Interface.ToGlobalName()}), new {resolver}<{entry.Interface.ToCreatorName()}, {entry.Interface.ToGlobalName()}>());
+";
+        }
+
+        return "";
+    })
+    .JoinWithNewLine()}
         }}
 
-        protected {containerType.Name}(ImTools.ImHashMap<Type, IInstanceResolver> resolvers, ImTools.ImHashMap<Type, IInstanceResolver> scopedResolvers, bool scope = false)
+        protected
+{ containerType.Name}
+(ImTools.ImHashMap<Type, IInstanceResolver> resolvers, ImTools.ImHashMap<Type, IInstanceResolver> scopedResolvers, bool scope = false)
             : base(resolvers, scopedResolvers, scope)
         {{
         }}
 
-         public override IZeroIoCResolver CreateScope()
-         {{
+        public override IZeroIoCResolver CreateScope()
+        {{
             var newScope = ScopedResolvers
-                .Enumerate()
-                .Aggregate(ImHashMap<Type, IInstanceResolver>.Empty, (acc, o) => acc.AddOrUpdate(o.Key, o.Value.Duplicate()));
-            
-            return new {containerType.Name}(Resolvers, newScope, true);
-         }}
+            .Enumerate()
+            .Aggregate(ImHashMap<Type, IInstanceResolver>.Empty, (acc, o) => acc.AddOrUpdate(o.Key, o.Value.Duplicate()));
+
+            return new { containerType.Name }(Resolvers, newScope, true);
+        }}
     }}
 }}
 ";
             context.AddSource(classDeclaration.Identifier.Text + "_ZeroIoCContainer", source);
+        }
+
+        private (string, string) MapResolver(ServiceEntry entry)
+        {
+            switch (entry.Lifetime)
+            {
+                case ServiceEntry.LifetimeKind.Singleton:
+                    return ("Resolvers", "SingletonResolver");
+                case ServiceEntry.LifetimeKind.Transient:
+                    return ("Resolvers", "TransientResolver");
+                case ServiceEntry.LifetimeKind.Scoped:
+                    return ("ScopedResolvers", "SingletonResolver");
+                default:
+                    return ("", "");
+            }
         }
 
         private static string ResolveConstructor(ITypeSymbol typeSymbol, HashSet<string> transients)
@@ -135,23 +186,26 @@ namespace {containerType.ContainingNamespace}
 
             var constructor = members.First();
             var arguments = constructor.Parameters.Select(o => o.Type).ToArray();
-            var argumentsText = arguments.Select(o => transients.Contains(o.ToGlobalName()) ? $"default({o.ToCreatorName()}).Create(resolver)"  : $"resolver.Resolve<{o.ToGlobalName()}>()");
+            var argumentsText = arguments.Select(o => transients.Contains(o.ToGlobalName()) ? $"default({o.ToCreatorName()}).Create(resolver)" : $"resolver.Resolve<{o.ToGlobalName()}>()");
             return $"new {typeSymbol.ToGlobalName()}({argumentsText.Join()})";
         }
 
-        private static void AddTypes(List<(ITypeSymbol Interface, ITypeSymbol Implementation)> singletons, GenericNameSyntax generic, SemanticModel semantic)
+        private static void AddTypes(List<ServiceEntry> singletons, ServiceEntry.LifetimeKind lifetimeKind, GenericNameSyntax generic, SemanticModel semantic)
         {
             if (generic.TypeArgumentList.Arguments.Count == 1)
             {
                 var type = generic.TypeArgumentList.Arguments.First();
-                singletons.Add(ExtractTypeSymbols(type, type));
+                var symbols = ExtractTypeSymbols(type, type);
+                singletons.Add(new ServiceEntry(lifetimeKind, symbols.Interface, symbols.Implementation));
             }
 
             if (generic.TypeArgumentList.Arguments.Count == 2)
             {
                 var interfaceType = generic.TypeArgumentList.Arguments.First();
                 var implementationType = generic.TypeArgumentList.Arguments.Last();
-                singletons.Add(ExtractTypeSymbols(interfaceType, implementationType));
+
+                var symbols = ExtractTypeSymbols(interfaceType, implementationType);
+                singletons.Add(new ServiceEntry(lifetimeKind, symbols.Interface, symbols.Implementation));
             }
 
             (ITypeSymbol Interface, ITypeSymbol Implementation) ExtractTypeSymbols(TypeSyntax interfaceType, TypeSyntax implementationType)
@@ -169,6 +223,27 @@ namespace {containerType.ContainingNamespace}
         public void Initialize(GeneratorInitializationContext context)
         {
             context.RegisterForSyntaxNotifications(() => new ZeroIoCDeclarationReceiver());
+        }
+
+        class ServiceEntry
+        {
+            public ServiceEntry(LifetimeKind lifetime, ITypeSymbol @interface, ITypeSymbol implementation)
+            {
+                Lifetime = lifetime;
+                Interface = @interface;
+                Implementation = implementation;
+            }
+
+            public enum LifetimeKind
+            {
+                Singleton,
+                Transient,
+                Scoped
+            }
+
+            public LifetimeKind Lifetime { get; set; }
+            public ITypeSymbol Interface { get; set; }
+            public ITypeSymbol Implementation { get; set; }
         }
     }
 
