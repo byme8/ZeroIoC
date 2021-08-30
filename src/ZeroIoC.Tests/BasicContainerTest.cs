@@ -1,9 +1,8 @@
-﻿using Microsoft.CodeAnalysis;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ZeroIoC.Tests.Data;
 using ZeroIoC.Tests.Utils;
 
@@ -219,7 +218,7 @@ namespace ZeroIoC.Tests
 
             var container = (IZeroIoCResolver)Activator.CreateInstance(containerType);
             var service = container.Resolve(serviceType);
-            
+
             Assert.IsNotNull(service);
         }
 

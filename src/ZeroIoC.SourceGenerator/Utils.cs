@@ -1,9 +1,9 @@
-﻿using Microsoft.CodeAnalysis.Text;
-using Microsoft.CodeAnalysis;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.Text;
 
 namespace ZeroIoC
 {
@@ -104,7 +104,7 @@ namespace ZeroIoC
         {
             return symbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
         }
-        
+
         public static string ToCreatorName(this ISymbol symbol)
         {
             return symbol.ToGlobalName().Replace(".", "_").Replace("global::", "") + "Creator";

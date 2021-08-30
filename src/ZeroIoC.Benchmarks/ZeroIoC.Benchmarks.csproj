@@ -15,4 +15,9 @@
     <ProjectReference Include="..\ZeroIoC.SourceGenerator\ZeroIoC.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="BenchmarkDotNet.Artifacts\results\ZeroIoC.Benchmarks.IoCBenchmark-report.html" />
+    <None Remove="BenchmarkDotNet.Artifacts\results\ZeroIoC.Benchmarks.IoCBenchmark-report-github.md" />
+  </ItemGroup>
+
 </Project>

@@ -1,8 +1,6 @@
-﻿using ImTools;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+using ImTools;
 using ZeroIoC.Core;
 
 namespace ZeroIoC
@@ -11,12 +9,10 @@ namespace ZeroIoC
     {
         protected ImHashMap<Type, IInstanceResolver> Resolvers = ImHashMap<Type, IInstanceResolver>.Empty;
 
+        protected bool Scoped;
+
         protected ImHashMap<Type, IInstanceResolver> ScopedResolvers =
             ImHashMap<Type, IInstanceResolver>.Empty;
-
-        protected bool Scoped = false;
-
-        protected abstract void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper);
 
         protected ZeroIoCContainer()
         {
@@ -54,31 +50,37 @@ namespace ZeroIoC
                 ExceptionHelper.ScopedWithoutScopeException(type.FullName);
             }
 
-            ExceptionHelper.ServiceIsNotRegistred(type.FullName);
+            ExceptionHelper.ServiceIsNotRegistered(type.FullName);
             return null;
         }
 
-        public void Merge(ZeroIoCContainer container)
+        public IEnumerable<object> ResolveMany(Type type)
         {
-            foreach (var resolver in container.Resolvers.Enumerate())
+            var enumarableType = typeof(IEnumerable<>).MakeGenericType(type);
+            var entry = Resolvers.GetValueOrDefault(enumarableType.GetHashCode(), type);
+            if (entry != null)
             {
-                Resolvers = Resolvers.AddOrUpdate(resolver.Key, resolver.Value);
+                return (IEnumerable<object>)entry;
             }
 
-            foreach (var resolver in container.ScopedResolvers.Enumerate())
+            if (Scoped)
             {
-                ScopedResolvers = ScopedResolvers.AddOrUpdate(resolver.Key, resolver.Value);
+                entry = ScopedResolvers.GetValueOrDefault(type.GetHashCode(), type);
             }
-        }
 
-        public void AddDelegate<TValue>(Func<IZeroIoCResolver, TValue> action)
-        {
-            Resolvers = Resolvers.AddOrUpdate(typeof(TValue), new SingletonResolver(o => action(o)));
-        }
+            if (entry != null)
+            {
+                return (IEnumerable<object>)entry;
+            }
 
-        public void AddInstance<TValue>(TValue value)
-        {
-            Resolvers = Resolvers.AddOrUpdate(typeof(TValue), new SingletonResolver(o => value));
+            entry = ScopedResolvers.GetValueOrDefault(type.GetHashCode(), type);
+            if (entry != null)
+            {
+                ExceptionHelper.ScopedWithoutScopeException(type.FullName);
+            }
+
+            ExceptionHelper.ServiceIsNotRegistered(type.FullName);
+            return null;
         }
 
         public void Dispose()
@@ -95,5 +97,30 @@ namespace ZeroIoC
         }
 
         public abstract IZeroIoCResolver CreateScope();
+
+        protected abstract void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper);
+
+        public void Merge(ZeroIoCContainer container)
+        {
+            foreach (var resolver in container.Resolvers.Enumerate())
+            {
+                Resolvers = Resolvers.AddOrUpdate(resolver.Key, resolver.Value);
+            }
+
+            foreach (var resolver in container.ScopedResolvers.Enumerate())
+            {
+                ScopedResolvers = ScopedResolvers.AddOrUpdate(resolver.Key, resolver.Value);
+            }
+        }
+
+        public void AddDelegate(Func<IZeroIoCResolver, object> resolver, Type interfaceType)
+        {
+            Resolvers = Resolvers.AddOrUpdate(interfaceType, new TransientResolver(o => resolver(o)));
+        }
+
+        public void AddInstance<TValue>(TValue value)
+        {
+            Resolvers = Resolvers.AddOrUpdate(typeof(TValue), new SingletonResolver(o => value));
+        }
     }
 }

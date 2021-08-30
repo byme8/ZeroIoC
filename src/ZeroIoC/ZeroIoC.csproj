@@ -1,18 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <NuspecFile>ZeroIoC.nuspec</NuspecFile>
-    <NuspecProperties>
-      version=$(Version);
-      authors=$(Authors);
-      owners=$(Owners);
-    </NuspecProperties>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <NuspecFile>ZeroIoC.nuspec</NuspecFile>
+        <NuspecProperties>
+            version=$(Version);
+            authors=$(Authors);
+            owners=$(Owners);
+        </NuspecProperties>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\ZeroIoC.Core\ZeroIoC.Core.csproj" />
-    <ProjectReference Include="..\ZeroIoC.SourceGenerator\ZeroIoC.SourceGenerator.csproj" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\ZeroIoC.Core\ZeroIoC.Core.csproj"/>
+        <ProjectReference Include="..\ZeroIoC.SourceGenerator\ZeroIoC.SourceGenerator.csproj"/>
+    </ItemGroup>
 
 </Project>

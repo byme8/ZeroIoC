@@ -1,16 +1,15 @@
 ﻿namespace ZeroIoC.Core
 {
-    static class ExceptionHelper
+    internal static class ExceptionHelper
     {
         public static void ScopedWithoutScopeException(string fullName)
         {
             throw new ScopedWithoutScopeException($"Type {fullName} is registred as scoped, but you are trying to create it without scope.");
         }
 
-        public static void ServiceIsNotRegistred(string fullName)
+        public static void ServiceIsNotRegistered(string fullName)
         {
-            throw new ServiceIsNotRegistred($"Type {fullName} is missing in resolver.");
+            throw new ServiceIsNotRegistered($"Type {fullName} is missing in resolver.");
         }
-
     }
 }
