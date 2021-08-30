@@ -1,15 +1,12 @@
 ﻿using Microsoft.CodeAnalysis;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace ZeroIoC
 {
     public class Descriptors
     {
-        public static readonly DiagnosticDescriptor ClassIsNotPartial = new (
-            "ZI001", 
-            "ZeroContainer has to be a partial class", 
+        public static readonly DiagnosticDescriptor ClassIsNotPartial = new(
+            "ZI001",
+            "ZeroContainer has to be a partial class",
             "The {0} ia not partial class. It is essential to enable source generation.",
             "ZeroIoc",
             DiagnosticSeverity.Error,
@@ -32,11 +29,11 @@ namespace ZeroIoC
             true);
 
         public static readonly DiagnosticDescriptor StatementsNotAllowed = new(
-           "ZI004",
-           "The Bootstrap method does not allow statements",
-           "The Bootstrap method does not allow statements. Use only method calls from the IZeroIoCContainerBootstrapper.",
-           "ZeroIoc",
-           DiagnosticSeverity.Error,
-           true);
+            "ZI004",
+            "The Bootstrap method does not allow statements",
+            "The Bootstrap method does not allow statements. Use only method calls from the IZeroIoCContainerBootstrapper.",
+            "ZeroIoc",
+            DiagnosticSeverity.Error,
+            true);
     }
 }

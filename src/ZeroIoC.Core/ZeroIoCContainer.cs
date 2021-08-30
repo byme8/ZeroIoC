@@ -1,8 +1,6 @@
-﻿using ImTools;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+using ImTools;
 using ZeroIoC.Core;
 
 namespace ZeroIoC
@@ -11,12 +9,10 @@ namespace ZeroIoC
     {
         protected ImHashMap<Type, IInstanceResolver> Resolvers = ImHashMap<Type, IInstanceResolver>.Empty;
 
+        protected bool Scoped;
+
         protected ImHashMap<Type, IInstanceResolver> ScopedResolvers =
             ImHashMap<Type, IInstanceResolver>.Empty;
-
-        protected bool Scoped = false;
-
-        protected abstract void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper);
 
         protected ZeroIoCContainer()
         {
@@ -54,7 +50,7 @@ namespace ZeroIoC
                 ExceptionHelper.ScopedWithoutScopeException(type.FullName);
             }
 
-            ExceptionHelper.ServiceIsNotRegistred(type.FullName);
+            ExceptionHelper.ServiceIsNotRegistered(type.FullName);
             return null;
         }
 
@@ -83,9 +79,26 @@ namespace ZeroIoC
                 ExceptionHelper.ScopedWithoutScopeException(type.FullName);
             }
 
-            ExceptionHelper.ServiceIsNotRegistred(type.FullName);
+            ExceptionHelper.ServiceIsNotRegistered(type.FullName);
             return null;
         }
+
+        public void Dispose()
+        {
+            foreach (var resolver in Resolvers.Enumerate())
+            {
+                resolver.Value.Dispose();
+            }
+
+            foreach (var resolver in ScopedResolvers.Enumerate())
+            {
+                resolver.Value.Dispose();
+            }
+        }
+
+        public abstract IZeroIoCResolver CreateScope();
+
+        protected abstract void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper);
 
         public void Merge(ZeroIoCContainer container)
         {
@@ -109,20 +122,5 @@ namespace ZeroIoC
         {
             Resolvers = Resolvers.AddOrUpdate(typeof(TValue), new SingletonResolver(o => value));
         }
-
-        public void Dispose()
-        {
-            foreach (var resolver in Resolvers.Enumerate())
-            {
-                resolver.Value.Dispose();
-            }
-
-            foreach (var resolver in ScopedResolvers.Enumerate())
-            {
-                resolver.Value.Dispose();
-            }
-        }
-
-        public abstract IZeroIoCResolver CreateScope();
     }
 }

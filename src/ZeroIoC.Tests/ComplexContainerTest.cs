@@ -1,9 +1,7 @@
-﻿using Microsoft.CodeAnalysis;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ZeroIoC.Tests.Data;
 using ZeroIoC.Tests.Utils;
 
@@ -166,7 +164,6 @@ namespace ZeroIoC.Tests
             Assert.AreNotSame(service1, service2);
         }
 
-        
 
         [TestMethod]
         public async Task AddMultipleServices()

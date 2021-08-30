@@ -1,15 +1,13 @@
-﻿using Microsoft.CodeAnalysis.Text;
-using Microsoft.CodeAnalysis;
-using System;
-using System.Collections;
+﻿using System;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using System.IO;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Text;
 
 namespace ZeroIoC.Tests.Utils
 {
@@ -57,13 +55,13 @@ namespace ZeroIoC.Tests.Utils
                 .Results
                 .SelectMany(o => o
                     .GeneratedSources
-                    .Select(o => new { o.SyntaxTree, o.HintName }));
+                    .Select(o => new { o.SyntaxTree, o.HintName, }));
 
 
             foreach (var file in results)
             {
                 project = project
-                    .AddDocument(file.HintName,file.SyntaxTree.ToString())
+                    .AddDocument(file.HintName, file.SyntaxTree.ToString())
                     .Project;
             }
 

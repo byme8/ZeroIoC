@@ -23,6 +23,7 @@ namespace ZeroIoC
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.Analyze | GeneratedCodeAnalysisFlags.ReportDiagnostics);
             context.RegisterSyntaxNodeAction(Handle, SyntaxKind.ClassDeclaration);
         }
+
         private void Handle(SyntaxNodeAnalysisContext context)
         {
             if (context.Node is ClassDeclarationSyntax classDeclaration &&
@@ -43,7 +44,7 @@ namespace ZeroIoC
                     .DescendantNodes()
                     .OfType<MethodDeclarationSyntax>()
                     .ToArray();
-                
+
                 var bootstrapMethod = methods.FirstOrDefault(o => o.Identifier.Text == "Bootstrap");
                 var createScopeMethod = methods.FirstOrDefault(o => o.Identifier.Text == "CreateScope");
 
@@ -79,12 +80,11 @@ namespace ZeroIoC
                     {
                         context.ReportDiagnostic(
                             Diagnostic.Create(
-                                Descriptors.StatementsNotAllowed, 
+                                Descriptors.StatementsNotAllowed,
                                 statement.GetLocation()));
                     }
                 }
             }
         }
-
     }
 }

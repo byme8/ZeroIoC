@@ -1,7 +1,8 @@
-﻿using BenchmarkDotNet.Attributes;
-using Grace.DependencyInjection;
-using System;
+﻿using System;
+using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Order;
 using BenchmarkDotNet.Running;
+using Grace.DependencyInjection;
 using Grace.DependencyInjection.Lifestyle;
 
 namespace ZeroIoC.Benchmarks
@@ -12,11 +13,11 @@ namespace ZeroIoC.Benchmarks
 
     public class UserService : IUserService
     {
-        public Guid Id { get; } = Guid.NewGuid();
-
         public UserService(Helper helper)
         {
         }
+
+        public Guid Id { get; } = Guid.NewGuid();
     }
 
     public class Helper
@@ -25,7 +26,6 @@ namespace ZeroIoC.Benchmarks
 
     public class SingleHelper
     {
-        
     }
 
     public class SingleService
@@ -49,20 +49,20 @@ namespace ZeroIoC.Benchmarks
         }
     }
 
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             BenchmarkRunner.Run<IoCBenchmark>();
         }
     }
 
     [MemoryDiagnoser]
-    [Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
+    [Orderer(SummaryOrderPolicy.FastestToSlowest)]
     public class IoCBenchmark
     {
-        private DependencyInjectionContainer _grace;
-        private Container _zeroioc;
+        private readonly DependencyInjectionContainer _grace;
+        private readonly Container _zeroioc;
 
         public IoCBenchmark()
         {
@@ -71,7 +71,7 @@ namespace ZeroIoC.Benchmarks
             {
                 o.Export<SingleHelper>().As<SingleHelper>().UsingLifestyle(new SingletonLifestyle());
                 o.Export<SingleService>().As<SingleService>().UsingLifestyle(new SingletonLifestyle());
-                
+
                 o.Export<Helper>().As<Helper>();
                 o.Export<UserService>().As<IUserService>();
             });
@@ -80,15 +80,27 @@ namespace ZeroIoC.Benchmarks
         }
 
         [Benchmark]
-        public IUserService ZeroTransient() => (IUserService)_zeroioc.Resolve(typeof(IUserService));
+        public IUserService ZeroTransient()
+        {
+            return (IUserService)_zeroioc.Resolve(typeof(IUserService));
+        }
 
         [Benchmark]
-        public IUserService GraceTransient() => (IUserService)_grace.Locate(typeof(IUserService));
-        
-        [Benchmark]
-        public SingleService ZeroSingleton() => (SingleService)_zeroioc.Resolve(typeof(SingleService));
+        public IUserService GraceTransient()
+        {
+            return (IUserService)_grace.Locate(typeof(IUserService));
+        }
 
         [Benchmark]
-        public SingleService GraceSingleton() => (SingleService)_grace.Locate(typeof(SingleService));
+        public SingleService ZeroSingleton()
+        {
+            return (SingleService)_zeroioc.Resolve(typeof(SingleService));
+        }
+
+        [Benchmark]
+        public SingleService GraceSingleton()
+        {
+            return (SingleService)_grace.Locate(typeof(SingleService));
+        }
     }
 }

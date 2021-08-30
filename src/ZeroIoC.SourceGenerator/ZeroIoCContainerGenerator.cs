@@ -1,8 +1,8 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.Collections.Generic;
+using System.Linq;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace ZeroIoC
 {
@@ -27,11 +27,16 @@ namespace ZeroIoC
             }
         }
 
+        public void Initialize(GeneratorInitializationContext context)
+        {
+            context.RegisterForSyntaxNotifications(() => new ZeroIoCDeclarationReceiver());
+        }
+
         private void GenerateContainer(GeneratorExecutionContext context, ClassDeclarationSyntax classDeclaration)
         {
             var bootstrapMethod = classDeclaration
-                            .DescendantNodes()
-                            .OfType<MethodDeclarationSyntax>()
+                .DescendantNodes()
+                .OfType<MethodDeclarationSyntax>()
                 .FirstOrDefault(o => o.Identifier.Text == "Bootstrap");
 
             if (bootstrapMethod == null)
@@ -112,7 +117,7 @@ namespace {containerType.ContainingNamespace}
         }}
 
 "
-)}
+    )}
 
 ")
     .JoinWithNewLine()}
@@ -137,7 +142,7 @@ namespace {containerType.ContainingNamespace}
         }}
 
         protected
-{ containerType.Name}
+{containerType.Name}
 (ImTools.ImHashMap<Type, IInstanceResolver> resolvers, ImTools.ImHashMap<Type, IInstanceResolver> scopedResolvers, bool scope = false)
             : base(resolvers, scopedResolvers, scope)
         {{
@@ -149,7 +154,7 @@ namespace {containerType.ContainingNamespace}
             .Enumerate()
             .Aggregate(ImHashMap<Type, IInstanceResolver>.Empty, (acc, o) => acc.AddOrUpdate(o.Key, o.Value.Duplicate()));
 
-            return new { containerType.Name }(Resolvers, newScope, true);
+            return new {containerType.Name}(Resolvers, newScope, true);
         }}
     }}
 }}
@@ -211,7 +216,7 @@ namespace {containerType.ContainingNamespace}
             (ITypeSymbol Interface, ITypeSymbol Implementation) ExtractTypeSymbols(TypeSyntax interfaceType, TypeSyntax implementationType)
             {
                 var interfaceSymbol = semantic.GetSpeculativeTypeInfo(interfaceType.SpanStart, interfaceType,
-                          SpeculativeBindingOption.BindAsTypeOrNamespace);
+                    SpeculativeBindingOption.BindAsTypeOrNamespace);
                 var implementationSymbol = semantic.GetSpeculativeTypeInfo(implementationType.SpanStart,
                     implementationType, SpeculativeBindingOption.BindAsTypeOrNamespace);
 
@@ -220,13 +225,15 @@ namespace {containerType.ContainingNamespace}
 
         }
 
-        public void Initialize(GeneratorInitializationContext context)
+        private class ServiceEntry
         {
-            context.RegisterForSyntaxNotifications(() => new ZeroIoCDeclarationReceiver());
-        }
+            public enum LifetimeKind
+            {
+                Singleton,
+                Transient,
+                Scoped,
+            }
 
-        class ServiceEntry
-        {
             public ServiceEntry(LifetimeKind lifetime, ITypeSymbol @interface, ITypeSymbol implementation)
             {
                 Lifetime = lifetime;
@@ -234,22 +241,15 @@ namespace {containerType.ContainingNamespace}
                 Implementation = implementation;
             }
 
-            public enum LifetimeKind
-            {
-                Singleton,
-                Transient,
-                Scoped
-            }
-
-            public LifetimeKind Lifetime { get; set; }
-            public ITypeSymbol Interface { get; set; }
-            public ITypeSymbol Implementation { get; set; }
+            public LifetimeKind Lifetime { get; }
+            public ITypeSymbol Interface { get; }
+            public ITypeSymbol Implementation { get; }
         }
     }
 
     public class ZeroIoCDeclarationReceiver : ISyntaxReceiver
     {
-        public List<ClassDeclarationSyntax> Declarations { get; } = new List<ClassDeclarationSyntax>();
+        public List<ClassDeclarationSyntax> Declarations { get; } = new();
 
         public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
         {
@@ -261,6 +261,7 @@ namespace {containerType.ContainingNamespace}
                     {
                         Declarations.Add(classDeclaration);
                     }
+
                     break;
             }
         }

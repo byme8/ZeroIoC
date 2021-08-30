@@ -39,5 +39,4 @@ namespace ZeroIoC
             container.AddDelegate(r => resolver(r), typeof(TService));
         }
     }
-
 }
