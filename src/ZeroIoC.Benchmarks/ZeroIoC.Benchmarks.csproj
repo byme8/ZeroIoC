@@ -1,23 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0</TargetFramework>
-  </PropertyGroup>
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net5.0</TargetFramework>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.13.0" />
-    <PackageReference Include="Grace" Version="7.2.1" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="BenchmarkDotNet" Version="0.13.0" />
+        <PackageReference Include="Grace" Version="7.2.1" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.2" />
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\ZeroIoC.Core\ZeroIoC.Core.csproj" />
-    <ProjectReference Include="..\ZeroIoC.SourceGenerator\ZeroIoC.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="BenchmarkDotNet.Artifacts\results\ZeroIoC.Benchmarks.IoCBenchmark-report.html" />
-    <None Remove="BenchmarkDotNet.Artifacts\results\ZeroIoC.Benchmarks.IoCBenchmark-report-github.md" />
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\ZeroIoC.Core\ZeroIoC.Core.csproj" />
+        <ProjectReference Include="..\ZeroIoC.SourceGenerator\ZeroIoC.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    </ItemGroup>
 
 </Project>

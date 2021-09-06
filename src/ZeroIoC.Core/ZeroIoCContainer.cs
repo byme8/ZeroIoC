@@ -54,35 +54,6 @@ namespace ZeroIoC
             return null;
         }
 
-        public IEnumerable<object> ResolveMany(Type type)
-        {
-            var enumarableType = typeof(IEnumerable<>).MakeGenericType(type);
-            var entry = Resolvers.GetValueOrDefault(enumarableType.GetHashCode(), type);
-            if (entry != null)
-            {
-                return (IEnumerable<object>)entry;
-            }
-
-            if (Scoped)
-            {
-                entry = ScopedResolvers.GetValueOrDefault(type.GetHashCode(), type);
-            }
-
-            if (entry != null)
-            {
-                return (IEnumerable<object>)entry;
-            }
-
-            entry = ScopedResolvers.GetValueOrDefault(type.GetHashCode(), type);
-            if (entry != null)
-            {
-                ExceptionHelper.ScopedWithoutScopeException(type.FullName);
-            }
-
-            ExceptionHelper.ServiceIsNotRegistered(type.FullName);
-            return null;
-        }
-
         public void Dispose()
         {
             foreach (var resolver in Resolvers.Enumerate())

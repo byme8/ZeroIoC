@@ -4,6 +4,7 @@ using BenchmarkDotNet.Order;
 using BenchmarkDotNet.Running;
 using Grace.DependencyInjection;
 using Grace.DependencyInjection.Lifestyle;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ZeroIoC.Benchmarks
 {
@@ -53,21 +54,33 @@ namespace ZeroIoC.Benchmarks
     {
         private static void Main(string[] args)
         {
-            BenchmarkRunner.Run<IoCBenchmark>();
+            BenchmarkRunner.Run<IoCStartupBenchmark>();
+            // BenchmarkRunner.Run<IoCRuntimeBenchmark>();
         }
     }
 
-    [MemoryDiagnoser]
-    [Orderer(SummaryOrderPolicy.FastestToSlowest)]
-    public class IoCBenchmark
+    public class Creators
     {
-        private readonly DependencyInjectionContainer _grace;
-        private readonly Container _zeroioc;
-
-        public IoCBenchmark()
+        public static Container CreateZeroIoC()
         {
-            _grace = new DependencyInjectionContainer();
-            _grace.Configure(o =>
+            return new Container();
+        }
+
+        public static ServiceProvider CreateMicrosoft()
+        {
+            var services = new ServiceCollection();
+            services.AddSingleton<SingleHelper>();
+            services.AddSingleton<SingleService>();
+            services.AddTransient<Helper>();
+            services.AddTransient<IUserService, UserService>();
+
+            return services.BuildServiceProvider();
+        }
+
+        public static DependencyInjectionContainer CreateGrace()
+        {
+            var grace = new DependencyInjectionContainer();
+            grace.Configure(o =>
             {
                 o.Export<SingleHelper>().As<SingleHelper>().UsingLifestyle(new SingletonLifestyle());
                 o.Export<SingleService>().As<SingleService>().UsingLifestyle(new SingletonLifestyle());
@@ -76,7 +89,58 @@ namespace ZeroIoC.Benchmarks
                 o.Export<UserService>().As<IUserService>();
             });
 
-            _zeroioc = new Container();
+            return grace;
+        }
+    }
+
+    [MemoryDiagnoser]
+    [Orderer(SummaryOrderPolicy.FastestToSlowest)]
+    public class IoCStartupBenchmark
+    {
+        [Benchmark]
+        public void MicrosoftStartup()
+        {
+            var resolver = Creators.CreateMicrosoft();
+            var userService = (IUserService)resolver.GetService(typeof(IUserService));
+            var singleService = (SingleService)resolver.GetService(typeof(SingleService));
+        }
+
+        [Benchmark]
+        public void ZeroStartup()
+        {
+            var resolver = Creators.CreateZeroIoC();
+            var userService = (IUserService)resolver.Resolve(typeof(IUserService));
+            var singleService = (SingleService)resolver.Resolve(typeof(SingleService));
+        }
+
+        [Benchmark]
+        public void GraceStartup()
+        {
+            var resolver = Creators.CreateGrace();
+            var userService = (IUserService)resolver.Locate(typeof(IUserService));
+            var singleService = (SingleService)resolver.Locate(typeof(SingleService));
+        }
+    }
+
+    [MemoryDiagnoser]
+    [Orderer(SummaryOrderPolicy.FastestToSlowest)]
+    public class IoCRuntimeBenchmark
+    {
+        private readonly DependencyInjectionContainer _grace;
+        private readonly Container _zeroioc;
+        private readonly ServiceProvider _serviceProvider;
+
+        public IoCRuntimeBenchmark()
+        {
+            _grace = Creators.CreateGrace();
+            _serviceProvider = Creators.CreateMicrosoft();
+            _zeroioc = Creators.CreateZeroIoC();
+        }
+
+        [Benchmark]
+        public IUserService MicrosoftTransient()
+        {
+            return (IUserService)_serviceProvider.GetService(typeof(IUserService));
         }
 
         [Benchmark]
@@ -89,6 +153,12 @@ namespace ZeroIoC.Benchmarks
         public IUserService GraceTransient()
         {
             return (IUserService)_grace.Locate(typeof(IUserService));
+        }
+
+        [Benchmark]
+        public SingleService MicrosoftSingleton()
+        {
+            return (SingleService)_serviceProvider.GetService(typeof(SingleService));
         }
 
         [Benchmark]
