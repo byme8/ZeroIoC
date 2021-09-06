@@ -11,8 +11,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\ZeroIoC.Core\ZeroIoC.Core.csproj"/>
-        <ProjectReference Include="..\ZeroIoC.SourceGenerator\ZeroIoC.SourceGenerator.csproj"/>
+        <ProjectReference Include="..\ZeroIoC.Core\ZeroIoC.Core.csproj" />
+        <ProjectReference Include="..\ZeroIoC.SourceGenerator\ZeroIoC.SourceGenerator.csproj" />
     </ItemGroup>
 
 </Project>
