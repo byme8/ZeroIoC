@@ -164,52 +164,6 @@ namespace ZeroIoC.Tests
             Assert.AreNotSame(service1, service2);
         }
 
-
-        [TestMethod]
-        public async Task AddMultipleServices()
-        {
-            var project = await TestProject.Project.ApplyToProgram(@"
-
-        public class Comparator0 : IComparable
-        {
-            public int CompareTo(object obj)
-            {
-                return 0;
-            }
-        }
-
-        public class Comparator1 : IComparable
-        {
-            public int CompareTo(object obj)
-            {
-                return 1;
-            }
-        }
-
-        public partial class TestContainer : ZeroIoCContainer
-        {
-            protected override void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper)
-            {
-                bootstrapper.AddSingleton<IComparable, Comparator0>();
-                bootstrapper.AddSingleton<IComparable, Comparator1>();
-            }
-        }
-");
-
-            var newProject = await project.ApplyZeroIoCGenerator();
-
-            var assembly = await newProject.CompileToRealAssembly();
-            var containerType = assembly.GetType("TestProject.TestContainer");
-
-            var container = (ZeroIoCContainer)Activator.CreateInstance(containerType);
-
-            var value = container.Resolve<IComparable>();
-            var values = container.ResolveMany<IComparable>();
-
-            Assert.IsNotNull(value);
-            Assert.IsTrue(values.Any());
-        }
-
         [TestMethod]
         public async Task AddInstance()
         {
