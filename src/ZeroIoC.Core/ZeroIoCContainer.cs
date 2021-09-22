@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using ImTools;
 using ZeroIoC.Core;
 
@@ -84,9 +83,22 @@ namespace ZeroIoC
             }
         }
 
-        public void AddDelegate(Func<IZeroIoCResolver, object> resolver, Type interfaceType)
+        public void AddDelegate(Func<IZeroIoCResolver, object> resolver, Type interfaceType, Reuse reuse = Reuse.Transient)
         {
-            Resolvers = Resolvers.AddOrUpdate(interfaceType, new TransientResolver(o => resolver(o)));
+            switch (reuse)
+            {
+                case Reuse.Scoped:
+                    ScopedResolvers = ScopedResolvers.AddOrUpdate(interfaceType, new SingletonResolver(resolver));
+                    break;
+                case Reuse.Singleton:
+                    Resolvers = Resolvers.AddOrUpdate(interfaceType, new SingletonResolver(resolver));
+                    break;
+                case Reuse.Transient:
+                    Resolvers = Resolvers.AddOrUpdate(interfaceType, new TransientResolver(resolver));
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(reuse), reuse, null);
+            }
         }
 
         public void AddInstance<TValue>(TValue value)

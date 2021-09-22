@@ -28,9 +28,9 @@ namespace ZeroIoC
             return (TService)container.Resolve(typeof(TService));
         }
 
-        public static void AddDelegate<TService>(this ZeroIoCContainer container, Func<IZeroIoCResolver, TService> resolver)
+        public static void AddDelegate<TService>(this ZeroIoCContainer container, Func<IZeroIoCResolver, TService> resolver, Reuse reuse = Reuse.Transient)
         {
-            container.AddDelegate(r => resolver(r), typeof(TService));
+            container.AddDelegate(r => resolver(r), typeof(TService), reuse);
         }
     }
 }
