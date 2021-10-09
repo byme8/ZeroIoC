@@ -2,7 +2,6 @@
 using System.Buffers;
 using System.Linq;
 using System.Reflection;
-using ImTools;
 using Microsoft.CodeAnalysis;
 
 namespace ZeroIoC.Tests.Data
@@ -52,7 +51,6 @@ namespace TestProject
                 MetadataReference.CreateFromFile(typeof(Attribute).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(ArrayPool<>).Assembly.Location),
                 MetadataReference.CreateFromFile(typeof(ZeroIoCContainer).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(Hasher).Assembly.Location),
             };
         }
     }

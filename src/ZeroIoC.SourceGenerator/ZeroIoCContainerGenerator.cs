@@ -83,44 +83,38 @@ namespace ZeroIoC
                 .Select(o => o.Interface.ToGlobalName()));
 
             var containerType = semantic.GetDeclaredSymbol(classDeclaration);
-            var source = @$"
-using System;
+            var source =
+@$"using System;
 using System.Linq;
 using System.Collections.Generic;
 using ZeroIoC;
-using ImTools;
 
 namespace {containerType.ContainingNamespace}
 {{
+    {ZeroIoCAnalyzer.CodeGenerationAttribute}
     public sealed partial class {containerType.Name}
-    {{
-
-{groupedEntries
-    .Select(o => $@"
-
+    {{{
+        groupedEntries
+            .Select(o =>
+                $@"
         private struct {o.First().Interface.ToCreatorName()} : ICreator<{o.First().Interface.ToGlobalName()}>
         {{
             public {o.First().Interface.ToGlobalName()} Create(IZeroIoCResolver resolver)
             {{
                 return {ResolveConstructor(o.First().Implementation, transients)};
             }}
-        }}
-
-{(o.Count() == 1 ? string.Empty : $@"
-
+        }}{
+                    (o.Count() == 1 ? string.Empty :
+        $@"
         private struct {o.First().Interface.ToCreatorName()}_Enumerable : ICreator<IEnumerable<{o.First().Interface.ToGlobalName()}>>
         {{
             public IEnumerable<{o.First().Interface.ToGlobalName()}> Create(IZeroIoCResolver resolver)
             {{
                 return new [] {{ {o.Select(oo => ResolveConstructor(oo.Implementation, transients)).Join()} }};
             }}
-        }}
-
-"
-    )}
-
-")
-    .JoinWithNewLine()}
+        }}"
+    )}")
+            .JoinWithNewLine()}
 
         public {containerType.Name}()
         {{
@@ -131,9 +125,7 @@ namespace {containerType.ContainingNamespace}
             var entry = o.First();
             var (propertyToStore, resolver) = MapResolver(entry);
 
-            return $@"
-            {propertyToStore} = {propertyToStore}.AddOrUpdate(typeof({entry.Interface.ToGlobalName()}), new {resolver}<{entry.Interface.ToCreatorName()}, {entry.Interface.ToGlobalName()}>());
-";
+            return $@"          {propertyToStore}.Add(typeof({entry.Interface.ToGlobalName()}), new {resolver}<{entry.Interface.ToCreatorName()}, {entry.Interface.ToGlobalName()}>());";
         }
 
         return "";
@@ -141,19 +133,14 @@ namespace {containerType.ContainingNamespace}
     .JoinWithNewLine()}
         }}
 
-        protected
-{containerType.Name}
-(ImTools.ImHashMap<Type, IInstanceResolver> resolvers, ImTools.ImHashMap<Type, IInstanceResolver> scopedResolvers, bool scope = false)
+        protected {containerType.Name}(Dictionary<Type, IInstanceResolver> resolvers, Dictionary<Type, IInstanceResolver> scopedResolvers, bool scope = false)
             : base(resolvers, scopedResolvers, scope)
         {{
         }}
 
         public override IZeroIoCResolver CreateScope()
         {{
-            var newScope = ScopedResolvers
-            .Enumerate()
-            .Aggregate(ImHashMap<Type, IInstanceResolver>.Empty, (acc, o) => acc.AddOrUpdate(o.Key, o.Value.Duplicate()));
-
+            var newScope = ScopedResolvers.ToDictionary(o => o.Key, o => o.Value.Duplicate());
             return new {containerType.Name}(Resolvers, newScope, true);
         }}
     }}
