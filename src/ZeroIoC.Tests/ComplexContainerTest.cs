@@ -204,5 +204,65 @@ namespace ZeroIoC.Tests
 
             Assert.IsNotNull(service);
         }
+        
+        [TestMethod]
+        public async Task ReplaceInstance()
+        {
+            var project = await TestProject.Project.ApplyToProgram(@"
+        public partial class TestContainer : ZeroIoCContainer
+        {
+            protected override void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper)
+            {
+            }
+        }
+");
+            var newProject = await project.ApplyZeroIoCGenerator();
+
+            var assembly = await newProject.CompileToRealAssembly();
+            var containerType = assembly.GetType("TestProject.TestContainer");
+
+            var container = (ZeroIoCContainer)Activator.CreateInstance(containerType);
+            
+            var guidValue = Guid.NewGuid();
+            container.AddInstance(guidValue);
+            var resolvedGuid = container.Resolve<Guid>();
+
+            Assert.IsTrue(guidValue == resolvedGuid);
+            
+            var newGuid = Guid.NewGuid();
+            container.ReplaceInstance(newGuid);
+            
+            Assert.IsFalse(newGuid == resolvedGuid);
+        }
+        
+        [TestMethod]
+        public async Task ReplaceDelegate()
+        {
+            var project = await TestProject.Project.ApplyToProgram(@"
+        public partial class TestContainer : ZeroIoCContainer
+        {
+            protected override void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper)
+            {
+            }
+        }
+");
+            var newProject = await project.ApplyZeroIoCGenerator();
+
+            var assembly = await newProject.CompileToRealAssembly();
+            var containerType = assembly.GetType("TestProject.TestContainer");
+
+            var container = (ZeroIoCContainer)Activator.CreateInstance(containerType);
+            
+            var guidValue = Guid.NewGuid();
+            container.AddDelegate(o => guidValue, Reuse.Singleton);
+            var resolvedGuid = container.Resolve<Guid>();
+
+            Assert.IsTrue(guidValue == resolvedGuid);
+            
+            var newGuid = Guid.NewGuid();
+            container.ReplaceDelegate(o => newGuid, Reuse.Singleton);
+            
+            Assert.IsFalse(newGuid == resolvedGuid);
+        }
     }
 }

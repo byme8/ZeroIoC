@@ -32,5 +32,10 @@ namespace ZeroIoC
         {
             container.AddDelegate(r => resolver(r), typeof(TService), reuse);
         }
+        
+        public static void ReplaceDelegate<TService>(this ZeroIoCContainer container, Func<IZeroIoCResolver, TService> resolver, Reuse reuse = Reuse.Transient)
+        {
+            container.ReplaceDelegate(r => resolver(r), typeof(TService), reuse);
+        }
     }
 }

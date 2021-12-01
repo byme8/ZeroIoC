@@ -95,10 +95,33 @@ namespace ZeroIoC
                     throw new ArgumentOutOfRangeException(nameof(reuse), reuse, null);
             }
         }
+        
+        public void ReplaceDelegate(Func<IZeroIoCResolver, object> resolver, Type interfaceType, Reuse reuse = Reuse.Transient)
+        {
+            switch (reuse)
+            {
+                case Reuse.Scoped:
+                    ScopedResolvers.AddOrReplace(interfaceType, new SingletonResolver(resolver));
+                    break;
+                case Reuse.Singleton:
+                    Resolvers.AddOrReplace(interfaceType, new SingletonResolver(resolver));
+                    break;
+                case Reuse.Transient:
+                    Resolvers.AddOrReplace(interfaceType, new TransientResolver(resolver));
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(reuse), reuse, null);
+            }
+        }
 
         public void AddInstance<TValue>(TValue value)
         {
             Resolvers.Add(typeof(TValue), new SingletonResolver(o => value));
+        }
+        
+        public void ReplaceInstance<TValue>(TValue value)
+        {
+            Resolvers.AddOrReplace(typeof(TValue), new SingletonResolver(o => value));
         }
     }
 }
