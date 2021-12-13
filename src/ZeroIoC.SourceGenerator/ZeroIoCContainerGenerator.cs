@@ -145,6 +145,13 @@ namespace {containerType.ContainingNamespace}
             var newScope = ScopedResolvers.ToDictionary(o => o.Key, o => o.Value.Duplicate());
             return new {containerType.Name}(Resolvers, newScope, true);
         }}
+
+        public override IZeroIoCResolver Clone()
+        {{
+            var copy = Resolvers.ToDictionary(o => o.Key, o => o.Value.Duplicate());
+            var scopedCopy = ScopedResolvers.ToDictionary(o => o.Key, o => o.Value.Duplicate());
+            return new {containerType.Name}(copy, scopedCopy, false);
+        }}
     }}
 }}
 ";

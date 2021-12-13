@@ -6,11 +6,10 @@ namespace ZeroIoC
 {
     public abstract class ZeroIoCContainer : IZeroIoCResolver
     {
-        protected Dictionary<Type, IInstanceResolver> Resolvers = new Dictionary<Type, IInstanceResolver>();
+        protected readonly Dictionary<Type, IInstanceResolver> Resolvers = new Dictionary<Type, IInstanceResolver>();
+        protected readonly Dictionary<Type, IInstanceResolver> ScopedResolvers = new Dictionary<Type, IInstanceResolver>();
 
-        protected bool Scoped;
-
-        protected Dictionary<Type, IInstanceResolver> ScopedResolvers = new Dictionary<Type, IInstanceResolver>();
+        protected readonly bool Scoped;
 
         protected ZeroIoCContainer()
         {
@@ -23,7 +22,12 @@ namespace ZeroIoC
             ScopedResolvers = scopedResolvers;
             Scoped = scope;
         }
+        
+        public abstract IZeroIoCResolver CreateScope();
+        public abstract IZeroIoCResolver Clone();
 
+        protected abstract void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper);
+        
         public object Resolve(Type type)
         {
             if (Resolvers.TryGetValue(type, out var entry))
@@ -46,36 +50,6 @@ namespace ZeroIoC
 
             ExceptionHelper.ServiceIsNotRegistered(type.FullName);
             return null;
-        }
-
-        public void Dispose()
-        {
-            foreach (var resolver in Resolvers.Values)
-            {
-                resolver.Dispose();
-            }
-
-            foreach (var resolver in ScopedResolvers.Values)
-            {
-                resolver.Dispose();
-            }
-        }
-
-        public abstract IZeroIoCResolver CreateScope();
-
-        protected abstract void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper);
-
-        public void Merge(ZeroIoCContainer container)
-        {
-            foreach (var resolver in container.Resolvers)
-            {
-                Resolvers.Add(resolver.Key, resolver.Value);
-            }
-
-            foreach (var resolver in container.ScopedResolvers)
-            {
-                ScopedResolvers.Add(resolver.Key, resolver.Value);
-            }
         }
 
         public void AddDelegate(Func<IZeroIoCResolver, object> resolver, Type interfaceType, Reuse reuse = Reuse.Transient)
@@ -122,6 +96,32 @@ namespace ZeroIoC
         public void ReplaceInstance<TValue>(TValue value)
         {
             Resolvers.AddOrReplace(typeof(TValue), new SingletonResolver(o => value));
+        }
+
+        public void Merge(ZeroIoCContainer container)
+        {
+            foreach (var resolver in container.Resolvers)
+            {
+                Resolvers.Add(resolver.Key, resolver.Value);
+            }
+
+            foreach (var resolver in container.ScopedResolvers)
+            {
+                ScopedResolvers.Add(resolver.Key, resolver.Value);
+            }
+        }
+
+        public void Dispose()
+        {
+            foreach (var resolver in Resolvers.Values)
+            {
+                resolver.Dispose();
+            }
+
+            foreach (var resolver in ScopedResolvers.Values)
+            {
+                resolver.Dispose();
+            }
         }
     }
 }

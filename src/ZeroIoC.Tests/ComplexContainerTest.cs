@@ -121,6 +121,61 @@ namespace ZeroIoC.Tests
 
             Assert.IsNotNull(service);
         }
+        
+        [TestMethod]
+        public async Task CloneContainer()
+        {
+            var project = await TestProject.Project.ApplyToProgram(@"
+
+        public interface IRepository
+        {
+
+        }
+
+        public class Repository : IRepository
+        {
+            
+        }
+
+        public interface IService
+        {
+
+        }
+
+        public class Service : IService
+        {
+            public Service(IRepository repository)
+            {
+
+            }
+        }
+
+        public partial class ServiceContainer : ZeroIoCContainer
+        {
+            protected override void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper)
+            {
+                bootstrapper.AddSingleton<IRepository, Repository>();
+                bootstrapper.AddSingleton<IService, Service>();
+            }
+        }
+");
+
+            var newProject = await project.ApplyZeroIoCGenerator();
+
+            var assembly = await newProject.CompileToRealAssembly();
+            var serviceContainerType = assembly.GetType("TestProject.ServiceContainer");
+            var serviceType = assembly.GetType("TestProject.IService");
+
+            var serviceContainer = (ZeroIoCContainer)Activator.CreateInstance(serviceContainerType);
+            var serviceContainerCopy = serviceContainer.Clone();
+
+            var service = serviceContainer.Resolve(serviceType);
+            var serviceCopy = serviceContainerCopy.Resolve(serviceType);
+
+            Assert.IsNotNull(service);
+            Assert.IsNotNull(serviceCopy);
+            Assert.AreNotSame(service, serviceCopy);
+        }
 
         [TestMethod]
         public async Task AddDelegateEachTimeDifferent()
