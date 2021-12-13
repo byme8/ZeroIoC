@@ -51,6 +51,30 @@ namespace ZeroIoC
             ExceptionHelper.ServiceIsNotRegistered(type.FullName);
             return null;
         }
+        
+        public object Resolve(Type type, Overrides overrides)
+        {
+            if (Resolvers.TryGetValue(type, out var entry))
+            {
+                return entry.Resolve(this, overrides);
+            }
+
+            if (Scoped)
+            {
+                if (ScopedResolvers.TryGetValue(type, out entry))
+                {
+                    return entry.Resolve(this, overrides);
+                }
+            }
+
+            if (ScopedResolvers.TryGetValue(type, out entry))
+            {
+                ExceptionHelper.ScopedWithoutScopeException(type.FullName);
+            }
+
+            ExceptionHelper.ServiceIsNotRegistered(type.FullName);
+            return null;
+        }
 
         public void AddDelegate(Func<IZeroIoCResolver, object> resolver, Type interfaceType, Reuse reuse = Reuse.Transient)
         {

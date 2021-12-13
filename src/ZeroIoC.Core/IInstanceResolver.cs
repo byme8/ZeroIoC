@@ -5,6 +5,7 @@ namespace ZeroIoC
     public interface IInstanceResolver : IDisposable
     {
         object Resolve(IZeroIoCResolver resolver);
+        object Resolve(IZeroIoCResolver resolver, Overrides overrides);
 
         IInstanceResolver Duplicate();
     }
@@ -12,8 +13,9 @@ namespace ZeroIoC
     public interface ICreator<T>
     {
         T Create(IZeroIoCResolver resolver);
+        T Create(IZeroIoCResolver resolver, Overrides overrides);
     }
-
+    
     public sealed class TransientResolver : IInstanceResolver
     {
         private readonly Func<IZeroIoCResolver, object> _activator;
@@ -24,6 +26,11 @@ namespace ZeroIoC
         }
 
         public object Resolve(IZeroIoCResolver resolver)
+        {
+            return _activator(resolver);
+        }
+
+        public object Resolve(IZeroIoCResolver resolver, Overrides overrides)
         {
             return _activator(resolver);
         }
@@ -46,6 +53,11 @@ namespace ZeroIoC
             return default(TCreator).Create(resolver);
         }
 
+        public object Resolve(IZeroIoCResolver resolver, Overrides overrides)
+        {
+            return default(TCreator).Create(resolver, overrides);
+        }
+
         public IInstanceResolver Duplicate()
         {
             return new TransientResolver<TCreator, TType>();
@@ -60,9 +72,11 @@ namespace ZeroIoC
     public sealed class SingletonResolver<TCreator, TType> : IInstanceResolver
         where TCreator : struct, ICreator<TType>
     {
+        private object @object = new object();
         private object _cache;
         private bool _disposed;
         private Func<IZeroIoCResolver, object> _resolve;
+        private Func<IZeroIoCResolver, Overrides, object> _resolveOverride;
 
         public SingletonResolver()
         {
@@ -70,11 +84,17 @@ namespace ZeroIoC
             _disposed = false;
 
             _resolve = ResolveInternal;
+            _resolveOverride = ResolveInternalOverride;
         }
 
         public object Resolve(IZeroIoCResolver resolver)
         {
             return _resolve(resolver);
+        }
+
+        public object Resolve(IZeroIoCResolver resolver, Overrides overrides)
+        {
+            return _resolveOverride(resolver, overrides);
         }
 
         public IInstanceResolver Duplicate()
@@ -98,7 +118,7 @@ namespace ZeroIoC
 
         private object ResolveInternal(IZeroIoCResolver resolver)
         {
-            lock (this)
+            lock (@object)
             {
                 if (_cache != null)
                 {
@@ -107,14 +127,27 @@ namespace ZeroIoC
 
                 var creator = default(TCreator);
                 _cache = creator.Create(resolver);
-                _resolve = GetCached;
+                _resolve = o => _cache;
+                _resolveOverride = (o, oo) => _cache;;
                 return _cache;
             }
         }
-
-        private object GetCached(IZeroIoCResolver resolver)
+        
+        private object ResolveInternalOverride(IZeroIoCResolver resolver, Overrides overrides)
         {
-            return _cache;
+            lock (@object)
+            {
+                if (_cache != null)
+                {
+                    return _cache;
+                }
+
+                var creator = default(TCreator);
+                _cache = creator.Create(resolver, overrides);
+                _resolve = o => _cache;
+                _resolveOverride = (o, oo) => _cache;;
+                return _cache;
+            }
         }
     }
 
@@ -135,6 +168,11 @@ namespace ZeroIoC
         }
 
         public object Resolve(IZeroIoCResolver resolver)
+        {
+            return _resolve(resolver);
+        }
+
+        public object Resolve(IZeroIoCResolver resolver, Overrides overrides)
         {
             return _resolve(resolver);
         }

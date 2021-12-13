@@ -101,6 +101,12 @@ namespace {containerType.ContainingNamespace}
                 $@"
         private struct {o.First().Interface.ToCreatorName()} : ICreator<{o.First().Interface.ToGlobalName()}>
         {{
+            public {o.First().Interface.ToGlobalName()} Create(IZeroIoCResolver resolver, Overrides overrides)
+            {{
+                {ResolveConstructorBodyWithOverrides(o.First().Implementation)}
+                return {ResolveConstructorWithOverrides(o.First().Implementation, transients)};
+            }}
+
             public {o.First().Interface.ToGlobalName()} Create(IZeroIoCResolver resolver)
             {{
                 return {ResolveConstructor(o.First().Implementation, transients)};
@@ -180,15 +186,41 @@ namespace {containerType.ContainingNamespace}
                 .Where(o => o.MethodKind == MethodKind.Constructor)
                 .ToArray();
 
-            if (members.Length > 1)
-            {
-
-            }
-
             var constructor = members.First();
             var arguments = constructor.Parameters.Select(o => o.Type).ToArray();
             var argumentsText = arguments.Select(o => transients.Contains(o.ToGlobalName()) ? $"default({o.ToCreatorName()}).Create(resolver)" : $"resolver.Resolve<{o.ToGlobalName()}>()");
             return $"new {typeSymbol.ToGlobalName()}({argumentsText.Join()})";
+        }
+        
+        private static string ResolveConstructorBodyWithOverrides(ITypeSymbol typeSymbol)
+        {
+            var members = typeSymbol.GetMembers()
+                .OfType<IMethodSymbol>()
+                .Where(o => o.MethodKind == MethodKind.Constructor)
+                .ToArray();
+
+            var constructor = members.First();
+            var arguments = constructor.Parameters
+                .Select(o => $"var {o.Name.ToLower()}Override = overrides.Constructor.Overrides.TryGetValue(\"{o.Name.ToLower()}\", out var {o.Name.ToLower()}Value);")
+                .ToArray();
+
+            return arguments.JoinWithNewLine();
+        }
+        
+        private static string ResolveConstructorWithOverrides(ITypeSymbol typeSymbol, HashSet<string> transients)
+        {
+            var members = typeSymbol.GetMembers()
+                .OfType<IMethodSymbol>()
+                .Where(o => o.MethodKind == MethodKind.Constructor)
+                .ToArray();
+
+            var constructor = members.First();
+            var argumentsText = constructor.Parameters
+                .Select(o => $"{o.Name.ToLower()}Override ? ({o.Type.ToGlobalName()}){o.Name.ToLower()}Value : {DefaultResolver(o.Type)}");
+            return $"new {typeSymbol.ToGlobalName()}({argumentsText.Join()})";
+
+            string DefaultResolver(ITypeSymbol type)
+                => transients.Contains(type.ToGlobalName()) ? $"default({type.ToCreatorName()}).Create(resolver)" : $"resolver.Resolve<{type.ToGlobalName()}>()";
         }
 
         private static void AddTypes(List<ServiceEntry> singletons, ServiceEntry.LifetimeKind lifetimeKind, GenericNameSyntax generic, SemanticModel semantic)
