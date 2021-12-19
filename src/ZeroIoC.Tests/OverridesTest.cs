@@ -44,18 +44,7 @@ public class OverridesTest
         var initialValue = "not override";
         container.AddInstance(initialValue);
 
-        var overrides = new Overrides
-        {
-            Constructor =
-            {
-                Overrides =
-                {
-                    {"value", "override"}, 
-                }, 
-            },
-        };
-        
-        var service = container.Resolve(serviceType, overrides);
+        var service = container.Resolve(serviceType, Overrides.Create().Constructor(("value", "override")));
         
         var value = service.ReflectionGetValue("Value");
         Assert.AreNotEqual(initialValue, value);
@@ -109,18 +98,7 @@ public class OverridesTest
         var initialValue = "not override";
         container.AddInstance(initialValue);
 
-        var overrides = new Overrides
-        {
-            Dependency =
-            {
-                Overrides =
-                {
-                    {typeof(string), () => "override"}, 
-                }, 
-            },
-        };
-
-        var service = container.Resolve(serviceType, overrides);
+        var service = container.Resolve(serviceType, Overrides.Create().Dependency<string>(() => "override"));
         
         var value = service.ReflectionGetValue("Value");
         var repositoryValue = service.ReflectionGetValue("Repository").ReflectionGetValue("Value");
@@ -128,5 +106,4 @@ public class OverridesTest
         Assert.AreNotEqual(initialValue, value);
         Assert.AreNotEqual(initialValue, repositoryValue);
     }
-
 }

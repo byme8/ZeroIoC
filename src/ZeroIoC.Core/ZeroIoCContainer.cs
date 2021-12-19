@@ -52,7 +52,7 @@ namespace ZeroIoC
             return null;
         }
         
-        public object Resolve(Type type, Overrides overrides)
+        public object Resolve(Type type, IOverrides overrides)
         {
             if (Resolvers.TryGetValue(type, out var entry))
             {

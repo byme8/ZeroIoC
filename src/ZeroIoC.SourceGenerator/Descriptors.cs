@@ -35,5 +35,21 @@ namespace ZeroIoC
             "ZeroIoc",
             DiagnosticSeverity.Error,
             true);
+        
+        public static readonly DiagnosticDescriptor MultipleTypeRegistrationsNotAllowed = new(
+            "ZI005",
+            "The multiple type registrations are not allowed",
+            "The multiple type registrations are not allowed",
+            "ZeroIoc",
+            DiagnosticSeverity.Error,
+            true);
+        
+        public static readonly DiagnosticDescriptor OnlyOneConstructorWithArgumentAllowed = new(
+            "ZI006",
+            "Only one constructor with argument allowed",
+            "Only one constructor with argument allowed",
+            "ZeroIoc",
+            DiagnosticSeverity.Error,
+            true);
     }
 }

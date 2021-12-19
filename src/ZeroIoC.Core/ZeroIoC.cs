@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace ZeroIoC
 {
@@ -9,7 +7,7 @@ namespace ZeroIoC
         IZeroIoCResolver CreateScope();
 
         object Resolve(Type serviceType);
-        object Resolve(Type type, Overrides overrides);
+        object Resolve(Type type, IOverrides overrides);
     }
 
     public interface IZeroIoCContainerBootstrapper
@@ -29,7 +27,7 @@ namespace ZeroIoC
             return (TService)container.Resolve(typeof(TService));
         }
         
-        public static TService Resolve<TService>(this IZeroIoCResolver container, Overrides overrides)
+        public static TService Resolve<TService>(this IZeroIoCResolver container, IOverrides overrides)
         {
             return (TService)container.Resolve(typeof(TService), overrides);
         }

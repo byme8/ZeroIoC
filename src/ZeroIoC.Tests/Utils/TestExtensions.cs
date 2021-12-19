@@ -97,6 +97,21 @@ namespace ZeroIoC.Tests.Utils
 
             return member.Invoke(@object, args);
         }
+        
+        public static object StaticReflectionCall(this object @object, string name, params object[] args)
+        {
+            var nonPublic = BindingFlags.Static | BindingFlags.Public;
+            var member = @object.GetType().GetMethod(name, nonPublic);
+            if (member is null)
+            {
+                return @object
+                    .GetType()
+                    .GetProperty(name, nonPublic)
+                    ?.GetValue(@object);
+            }
+
+            return member.Invoke(@object, args);
+        }
 
         public static async Task<Assembly> CompileToRealAssembly(this Project project)
         {

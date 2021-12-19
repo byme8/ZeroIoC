@@ -5,7 +5,7 @@ namespace ZeroIoC
     public interface IInstanceResolver : IDisposable
     {
         object Resolve(IZeroIoCResolver resolver);
-        object Resolve(IZeroIoCResolver resolver, Overrides overrides);
+        object Resolve(IZeroIoCResolver resolver, IOverrides overrides);
 
         IInstanceResolver Duplicate();
     }
@@ -13,7 +13,7 @@ namespace ZeroIoC
     public interface ICreator<T>
     {
         T Create(IZeroIoCResolver resolver);
-        T Create(IZeroIoCResolver resolver, Overrides overrides);
+        T Create(IZeroIoCResolver resolver, IOverrides overrides);
     }
     
     public sealed class TransientResolver : IInstanceResolver
@@ -30,7 +30,7 @@ namespace ZeroIoC
             return _activator(resolver);
         }
 
-        public object Resolve(IZeroIoCResolver resolver, Overrides overrides)
+        public object Resolve(IZeroIoCResolver resolver, IOverrides overrides)
         {
             return _activator(resolver);
         }
@@ -53,7 +53,7 @@ namespace ZeroIoC
             return default(TCreator).Create(resolver);
         }
 
-        public object Resolve(IZeroIoCResolver resolver, Overrides overrides)
+        public object Resolve(IZeroIoCResolver resolver, IOverrides overrides)
         {
             return default(TCreator).Create(resolver, overrides);
         }
@@ -76,7 +76,7 @@ namespace ZeroIoC
         private object _cache;
         private bool _disposed;
         private Func<IZeroIoCResolver, object> _resolve;
-        private Func<IZeroIoCResolver, Overrides, object> _resolveOverride;
+        private Func<IZeroIoCResolver, IOverrides, object> _resolveOverride;
 
         public SingletonResolver()
         {
@@ -92,7 +92,7 @@ namespace ZeroIoC
             return _resolve(resolver);
         }
 
-        public object Resolve(IZeroIoCResolver resolver, Overrides overrides)
+        public object Resolve(IZeroIoCResolver resolver, IOverrides overrides)
         {
             return _resolveOverride(resolver, overrides);
         }
@@ -133,7 +133,7 @@ namespace ZeroIoC
             }
         }
         
-        private object ResolveInternalOverride(IZeroIoCResolver resolver, Overrides overrides)
+        private object ResolveInternalOverride(IZeroIoCResolver resolver, IOverrides overrides)
         {
             lock (@object)
             {
@@ -172,7 +172,7 @@ namespace ZeroIoC
             return _resolve(resolver);
         }
 
-        public object Resolve(IZeroIoCResolver resolver, Overrides overrides)
+        public object Resolve(IZeroIoCResolver resolver, IOverrides overrides)
         {
             return _resolve(resolver);
         }
