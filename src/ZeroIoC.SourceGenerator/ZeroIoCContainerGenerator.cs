@@ -104,7 +104,7 @@ namespace {containerType.ContainingNamespace}
             public {o.First().Interface.ToGlobalName()} Create(IZeroIoCResolver resolver, Overrides overrides)
             {{
                 {ResolveConstructorBodyWithOverrides(o.First().Implementation)}
-                return {ResolveConstructorWithOverrides(o.First().Implementation, transients)};
+                {ResolveConstructorWithOverrides(o.First().Implementation, transients)}
             }}
 
             public {o.First().Interface.ToGlobalName()} Create(IZeroIoCResolver resolver)
@@ -201,7 +201,10 @@ namespace {containerType.ContainingNamespace}
 
             var constructor = members.First();
             var arguments = constructor.Parameters
-                .Select(o => $"var {o.Name.ToLower()}Override = overrides.Constructor.Overrides.TryGetValue(\"{o.Name.ToLower()}\", out var {o.Name.ToLower()}Value);")
+                .Select((o, i) => @$"
+                var constructor{o.Name.ToLower()}{i}Override = overrides.Constructor.Overrides.TryGetValue(""{o.Name.ToLower()}"", out var constructor{o.Name.ToLower()}{i}Value);
+                var dependency{o.Name.ToLower()}{i}Override = overrides.Dependency.Overrides.TryGetValue(typeof({o.Type.ToGlobalName()}), out var dependency{o.Name.ToLower()}{i}Func);
+")
                 .ToArray();
 
             return arguments.JoinWithNewLine();
@@ -215,12 +218,45 @@ namespace {containerType.ContainingNamespace}
                 .ToArray();
 
             var constructor = members.First();
-            var argumentsText = constructor.Parameters
-                .Select(o => $"{o.Name.ToLower()}Override ? ({o.Type.ToGlobalName()}){o.Name.ToLower()}Value : {DefaultResolver(o.Type)}");
-            return $"new {typeSymbol.ToGlobalName()}({argumentsText.Join()})";
+            var variables = constructor.Parameters
+                .Select(ResolveVariable);
 
-            string DefaultResolver(ITypeSymbol type)
-                => transients.Contains(type.ToGlobalName()) ? $"default({type.ToCreatorName()}).Create(resolver)" : $"resolver.Resolve<{type.ToGlobalName()}>()";
+            var parameters = constructor.Parameters
+                .Select((o, i) => $"{o.Name.ToLower()}{i.ToString()}")
+                .Join();
+            
+            return @$"
+                var nextOverrides = new Overrides();
+                nextOverrides.Dependency = overrides.Dependency;
+
+                {variables.JoinWithNewLine()}
+                
+                return new {typeSymbol.ToGlobalName()}({parameters});";
+
+            string ResolveVariable(IParameterSymbol parameter, int index)
+            {
+                var parameterName = $"{parameter.Name.ToLower()}{index.ToString()}";
+                var parameterType = parameter.Type.ToGlobalName();
+                var result = $@"
+                {parameterType} {parameterName} = default;
+                if(constructor{parameterName}Override)
+                {{
+                    {parameterName} = ({parameterType})constructor{parameterName}Value;
+                }}
+
+                if(!constructor{parameterName}Override && dependency{parameterName}Override)
+                {{
+                    {parameterName} = ({parameterType})dependency{parameterName}Func();
+                }}
+                
+                if(!constructor{parameterName}Override && !dependency{parameterName}Override)
+                {{
+                    {parameterName} = {(transients.Contains(parameter.ToGlobalName()) ? $"default({parameter.ToCreatorName()}).Create(resolver, nextOverrides)" : $"resolver.Resolve<{parameterType}>(nextOverrides)")};
+                }}
+";
+
+                return result;
+            }
         }
 
         private static void AddTypes(List<ServiceEntry> singletons, ServiceEntry.LifetimeKind lifetimeKind, GenericNameSyntax generic, SemanticModel semantic)
@@ -272,26 +308,6 @@ namespace {containerType.ContainingNamespace}
             public LifetimeKind Lifetime { get; }
             public ITypeSymbol Interface { get; }
             public ITypeSymbol Implementation { get; }
-        }
-    }
-
-    public class ZeroIoCDeclarationReceiver : ISyntaxReceiver
-    {
-        public List<ClassDeclarationSyntax> Declarations { get; } = new();
-
-        public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
-        {
-            switch (syntaxNode)
-            {
-                case ClassDeclarationSyntax classDeclaration:
-                    if (classDeclaration.BaseList?.Types
-                        .Any(o => o.Type.ToString() == "ZeroIoCContainer") ?? false)
-                    {
-                        Declarations.Add(classDeclaration);
-                    }
-
-                    break;
-            }
         }
     }
 }

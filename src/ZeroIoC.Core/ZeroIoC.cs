@@ -9,6 +9,7 @@ namespace ZeroIoC
         IZeroIoCResolver CreateScope();
 
         object Resolve(Type serviceType);
+        object Resolve(Type type, Overrides overrides);
     }
 
     public interface IZeroIoCContainerBootstrapper
@@ -26,6 +27,11 @@ namespace ZeroIoC
         public static TService Resolve<TService>(this IZeroIoCResolver container)
         {
             return (TService)container.Resolve(typeof(TService));
+        }
+        
+        public static TService Resolve<TService>(this IZeroIoCResolver container, Overrides overrides)
+        {
+            return (TService)container.Resolve(typeof(TService), overrides);
         }
 
         public static void AddDelegate<TService>(this ZeroIoCContainer container, Func<IZeroIoCResolver, TService> resolver, Reuse reuse = Reuse.Transient)

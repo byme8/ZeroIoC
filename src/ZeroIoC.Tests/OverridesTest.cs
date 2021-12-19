@@ -36,10 +36,10 @@ public class OverridesTest
         var newProject = await project.ApplyZeroIoCGenerator();
 
         var assembly = await newProject.CompileToRealAssembly();
-        var containerType = assembly.GetType("TestProject.TestContainer");
+        var containerType = assembly.GetType("TestProject.TestContainer")!;
         var serviceType = assembly.GetType("TestProject.Service");
 
-        var container = (ZeroIoCContainer)Activator.CreateInstance(containerType);
+        var container = (ZeroIoCContainer)Activator.CreateInstance(containerType)!;
         
         var initialValue = "not override";
         container.AddInstance(initialValue);
@@ -50,15 +50,83 @@ public class OverridesTest
             {
                 Overrides =
                 {
-                    {"value", "override"} 
-                } 
-            }
+                    {"value", "override"}, 
+                }, 
+            },
         };
         
         var service = container.Resolve(serviceType, overrides);
         
         var value = service.ReflectionGetValue("Value");
         Assert.AreNotEqual(initialValue, value);
+    }
+    
+    [TestMethod]
+    public async Task DeepDependencyOverridesWorks()
+    {
+        var project = await TestProject.Project.ApplyToProgram(@"
+
+        public class Repository
+        {
+            public string Value { get; set; }
+
+            public Repository(string value)
+            {
+                this.Value = value;
+            }
+        }
+
+        public class Service
+        {
+            public string Value { get; set; }
+            public Repository Repository { get; set; }
+
+            public Service(string value, Repository repository)
+            {
+                this.Value = value;
+                this.Repository = repository;
+            }
+        }
+
+        public partial class TestContainer : ZeroIoCContainer
+        {
+            protected override void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper)
+            {
+                bootstrapper.AddTransient<Service>();
+                bootstrapper.AddTransient<Repository>();
+            }
+        }
+");
+
+        var newProject = await project.ApplyZeroIoCGenerator();
+
+        var assembly = await newProject.CompileToRealAssembly();
+        var containerType = assembly.GetType("TestProject.TestContainer")!;
+        var serviceType = assembly.GetType("TestProject.Service");
+
+        var container = (ZeroIoCContainer)Activator.CreateInstance(containerType)!;
+        
+        var initialValue = "not override";
+        container.AddInstance(initialValue);
+
+        var overrides = new Overrides
+        {
+            Dependency =
+            {
+                Overrides =
+                {
+                    {typeof(string), () => "override"}, 
+                }, 
+            },
+        };
+
+        var service = container.Resolve(serviceType, overrides);
+        
+        var value = service.ReflectionGetValue("Value");
+        var repositoryValue = service.ReflectionGetValue("Repository").ReflectionGetValue("Value");
+        
+        Assert.AreNotEqual(initialValue, value);
+        Assert.AreNotEqual(initialValue, repositoryValue);
     }
 
 }
