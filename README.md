@@ -46,12 +46,25 @@ dotnet add package ZeroIoC
   var userService = container.Resolve<IUserService>();
 ```
 
+4. You can override a constructor argument or some dependency:
+``` cs
+  var container = new Container();
+  var userService = container.Resolve<IUserService>(
+    Overrides.Create()
+        .Constructor(("helper", new Helper())));
+  // ...
+  var userService = container.Resolve<IUserService>(
+    Overrides.Create()
+        .Dependency<Helper>(() => new Helper()));
+```
+
 ## Features
 
 I would say it is in the MVP stage. Under MVP, I mean that the set of features is big enough to be helpful in real projects.
 This set contains:
 - Multiple IoC containers can be active at the same time.
 - Support for the singleton, scoped, and transient lifetimes => basic things that cover 99% of all needs.
+- Support for overrides, you can override a constructor argument or some dependency for one call => usefull in some advanced scenarios and during testing.
 - Powered by source generation to avoid reflection and Reflection.Emit => you can use it inside the AOT Xamarin/Unity app.
 - Fast enough, with minimal overhead => the end-user of the Xamarin app will not notice a difference.
 
