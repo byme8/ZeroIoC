@@ -22,9 +22,16 @@ namespace ZeroIoC
             ScopedResolvers = scopedResolvers;
             Scoped = scope;
         }
-        
-        public abstract IZeroIoCResolver CreateScope();
-        public abstract IZeroIoCResolver Clone();
+
+        public virtual IZeroIoCResolver CreateScope()
+        {
+            throw new NotImplementedException(nameof(CreateScope));
+        }
+
+        public virtual IZeroIoCResolver Clone()
+        {
+            throw new NotImplementedException(nameof(CreateScope));
+        }
 
         protected abstract void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper);
         
