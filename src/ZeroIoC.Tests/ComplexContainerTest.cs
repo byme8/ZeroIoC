@@ -1,19 +1,18 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using ZeroIoC.Tests.Data;
 using ZeroIoC.Tests.Utils;
 
-namespace ZeroIoC.Tests
+namespace ZeroIoC.Tests;
+
+public class ComplexContainerTest
 {
-    [TestClass]
-    public class ComplexContainerTest
+    [Fact]
+    public async Task CanResolveNestedServices()
     {
-        [TestMethod]
-        public async Task CanResolveNestedServices()
-        {
-            var project = await TestProject.Project.ApplyToProgram(@"
+        var project = await TestProject.Project.ApplyToProgram(@"
 
         public interface IRepository
         {
@@ -48,23 +47,23 @@ namespace ZeroIoC.Tests
         }
 ");
 
-            var newProject = await project.ApplyZeroIoCGenerator();
+        var newProject = await project.ApplyZeroIoCGenerator();
 
-            var assembly = await newProject.CompileToRealAssembly();
-            var containerType = assembly.GetType("TestProject.TestContainer");
-            var serviceType = assembly.GetType("TestProject.IService");
+        var assembly = await newProject.CompileToRealAssembly();
+        var containerType = assembly.GetType("TestProject.TestContainer");
+        var serviceType = assembly.GetType("TestProject.IService");
 
-            var container = (IZeroIoCResolver)Activator.CreateInstance(containerType);
-            var firstService = container.Resolve(serviceType);
-            var secondService = container.Resolve(serviceType);
+        var container = (IZeroIoCResolver)Activator.CreateInstance(containerType);
+        var firstService = container.Resolve(serviceType);
+        var secondService = container.Resolve(serviceType);
 
-            Assert.IsTrue(firstService != null && secondService != null && !firstService.Equals(secondService));
-        }
+        Assert.True(firstService != null && secondService != null && !firstService.Equals(secondService));
+    }
 
-        [TestMethod]
-        public async Task MergeMultipleContainers()
-        {
-            var project = await TestProject.Project.ApplyToProgram(@"
+    [Fact]
+    public async Task MergeMultipleContainers()
+    {
+        var project = await TestProject.Project.ApplyToProgram(@"
 
         public interface IRepository
         {
@@ -106,26 +105,26 @@ namespace ZeroIoC.Tests
         }
 ");
 
-            var newProject = await project.ApplyZeroIoCGenerator();
+        var newProject = await project.ApplyZeroIoCGenerator();
 
-            var assembly = await newProject.CompileToRealAssembly();
-            var serviceContainerType = assembly.GetType("TestProject.ServiceContainer");
-            var repositoryContainerType = assembly.GetType("TestProject.RepositoryContainer");
-            var serviceType = assembly.GetType("TestProject.IService");
+        var assembly = await newProject.CompileToRealAssembly();
+        var serviceContainerType = assembly.GetType("TestProject.ServiceContainer");
+        var repositoryContainerType = assembly.GetType("TestProject.RepositoryContainer");
+        var serviceType = assembly.GetType("TestProject.IService");
 
-            var serviceContainer = (ZeroIoCContainer)Activator.CreateInstance(serviceContainerType);
-            var repositoryContainer = (ZeroIoCContainer)Activator.CreateInstance(repositoryContainerType);
-            repositoryContainer.Merge(serviceContainer);
+        var serviceContainer = (ZeroIoCContainer)Activator.CreateInstance(serviceContainerType);
+        var repositoryContainer = (ZeroIoCContainer)Activator.CreateInstance(repositoryContainerType);
+        repositoryContainer.Merge(serviceContainer);
 
-            var service = repositoryContainer.Resolve(serviceType);
+        var service = repositoryContainer.Resolve(serviceType);
 
-            Assert.IsNotNull(service);
-        }
+        Assert.NotNull(service);
+    }
         
-        [TestMethod]
-        public async Task CloneContainer()
-        {
-            var project = await TestProject.Project.ApplyToProgram(@"
+    [Fact]
+    public async Task CloneContainer()
+    {
+        var project = await TestProject.Project.ApplyToProgram(@"
 
         public interface IRepository
         {
@@ -160,69 +159,27 @@ namespace ZeroIoC.Tests
         }
 ");
 
-            var newProject = await project.ApplyZeroIoCGenerator();
+        var newProject = await project.ApplyZeroIoCGenerator();
 
-            var assembly = await newProject.CompileToRealAssembly();
-            var serviceContainerType = assembly.GetType("TestProject.ServiceContainer");
-            var serviceType = assembly.GetType("TestProject.IService");
+        var assembly = await newProject.CompileToRealAssembly();
+        var serviceContainerType = assembly.GetType("TestProject.ServiceContainer");
+        var serviceType = assembly.GetType("TestProject.IService");
 
-            var serviceContainer = (ZeroIoCContainer)Activator.CreateInstance(serviceContainerType);
-            var serviceContainerCopy = serviceContainer.Clone();
+        var serviceContainer = (ZeroIoCContainer)Activator.CreateInstance(serviceContainerType);
+        var serviceContainerCopy = serviceContainer.Clone();
 
-            var service = serviceContainer.Resolve(serviceType);
-            var serviceCopy = serviceContainerCopy.Resolve(serviceType);
+        var service = serviceContainer.Resolve(serviceType);
+        var serviceCopy = serviceContainerCopy.Resolve(serviceType);
 
-            Assert.IsNotNull(service);
-            Assert.IsNotNull(serviceCopy);
-            Assert.AreNotSame(service, serviceCopy);
-        }
+        Assert.NotNull(service);
+        Assert.NotNull(serviceCopy);
+        Assert.NotSame(service, serviceCopy);
+    }
 
-        [TestMethod]
-        public async Task AddDelegateEachTimeDifferent()
-        {
-            var project = await TestProject.Project.ApplyToProgram(@"
-
-        public interface IService
-        {
-
-        }
-
-        public class Service : IService
-        {
-            public string Id { get; } 
-            public Service(string id)
-            {
-                Id = id;
-            }
-        }
-
-        public partial class TestContainer : ZeroIoCContainer
-        {
-            protected override void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper)
-            {
-                bootstrapper.AddSingleton<IService, Service>();
-            }
-        }
-");
-
-            var newProject = await project.ApplyZeroIoCGenerator();
-
-            var assembly = await newProject.CompileToRealAssembly();
-            var containerType = assembly.GetType("TestProject.TestContainer");
-
-            var container = (ZeroIoCContainer)Activator.CreateInstance(containerType);
-            container.AddDelegate(o => Guid.NewGuid().ToString());
-
-            var service1 = container.Resolve(typeof(string));
-            var service2 = container.Resolve(typeof(string));
-
-            Assert.AreNotSame(service1, service2);
-        }
-
-        [TestMethod]
-        public async Task AddInstance()
-        {
-            var project = await TestProject.Project.ApplyToProgram(@"
+    [Fact]
+    public async Task AddDelegateEachTimeDifferent()
+    {
+        var project = await TestProject.Project.ApplyToProgram(@"
 
         public interface IService
         {
@@ -247,23 +204,65 @@ namespace ZeroIoC.Tests
         }
 ");
 
-            var newProject = await project.ApplyZeroIoCGenerator();
+        var newProject = await project.ApplyZeroIoCGenerator();
 
-            var assembly = await newProject.CompileToRealAssembly();
-            var containerType = assembly.GetType("TestProject.TestContainer");
-            var serviceType = assembly.GetType("TestProject.IService");
+        var assembly = await newProject.CompileToRealAssembly();
+        var containerType = assembly.GetType("TestProject.TestContainer");
 
-            var container = (ZeroIoCContainer)Activator.CreateInstance(containerType);
-            container.AddInstance(Guid.NewGuid().ToString());
-            var service = container.Resolve(serviceType);
+        var container = (ZeroIoCContainer)Activator.CreateInstance(containerType);
+        container.AddDelegate(o => Guid.NewGuid().ToString());
 
-            Assert.IsNotNull(service);
-        }
-        
-        [TestMethod]
-        public async Task ReplaceInstance()
+        var service1 = container.Resolve(typeof(string));
+        var service2 = container.Resolve(typeof(string));
+
+        Assert.NotSame(service1, service2);
+    }
+
+    [Fact]
+    public async Task AddInstance()
+    {
+        var project = await TestProject.Project.ApplyToProgram(@"
+
+        public interface IService
         {
-            var project = await TestProject.Project.ApplyToProgram(@"
+
+        }
+
+        public class Service : IService
+        {
+            public string Id { get; } 
+            public Service(string id)
+            {
+                Id = id;
+            }
+        }
+
+        public partial class TestContainer : ZeroIoCContainer
+        {
+            protected override void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper)
+            {
+                bootstrapper.AddSingleton<IService, Service>();
+            }
+        }
+");
+
+        var newProject = await project.ApplyZeroIoCGenerator();
+
+        var assembly = await newProject.CompileToRealAssembly();
+        var containerType = assembly.GetType("TestProject.TestContainer");
+        var serviceType = assembly.GetType("TestProject.IService");
+
+        var container = (ZeroIoCContainer)Activator.CreateInstance(containerType);
+        container.AddInstance(Guid.NewGuid().ToString());
+        var service = container.Resolve(serviceType);
+
+        Assert.NotNull(service);
+    }
+        
+    [Fact]
+    public async Task ReplaceInstance()
+    {
+        var project = await TestProject.Project.ApplyToProgram(@"
         public partial class TestContainer : ZeroIoCContainer
         {
             protected override void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper)
@@ -271,29 +270,29 @@ namespace ZeroIoC.Tests
             }
         }
 ");
-            var newProject = await project.ApplyZeroIoCGenerator();
+        var newProject = await project.ApplyZeroIoCGenerator();
 
-            var assembly = await newProject.CompileToRealAssembly();
-            var containerType = assembly.GetType("TestProject.TestContainer");
+        var assembly = await newProject.CompileToRealAssembly();
+        var containerType = assembly.GetType("TestProject.TestContainer");
 
-            var container = (ZeroIoCContainer)Activator.CreateInstance(containerType);
+        var container = (ZeroIoCContainer)Activator.CreateInstance(containerType);
             
-            var guidValue = Guid.NewGuid();
-            container.AddInstance(guidValue);
-            var resolvedGuid = container.Resolve<Guid>();
+        var guidValue = Guid.NewGuid();
+        container.AddInstance(guidValue);
+        var resolvedGuid = container.Resolve<Guid>();
 
-            Assert.IsTrue(guidValue == resolvedGuid);
+        Assert.True(guidValue == resolvedGuid);
             
-            var newGuid = Guid.NewGuid();
-            container.ReplaceInstance(newGuid);
+        var newGuid = Guid.NewGuid();
+        container.ReplaceInstance(newGuid);
             
-            Assert.IsFalse(newGuid == resolvedGuid);
-        }
+        Assert.False(newGuid == resolvedGuid);
+    }
         
-        [TestMethod]
-        public async Task ReplaceDelegate()
-        {
-            var project = await TestProject.Project.ApplyToProgram(@"
+    [Fact]
+    public async Task ReplaceDelegate()
+    {
+        var project = await TestProject.Project.ApplyToProgram(@"
         public partial class TestContainer : ZeroIoCContainer
         {
             protected override void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper)
@@ -301,23 +300,22 @@ namespace ZeroIoC.Tests
             }
         }
 ");
-            var newProject = await project.ApplyZeroIoCGenerator();
+        var newProject = await project.ApplyZeroIoCGenerator();
 
-            var assembly = await newProject.CompileToRealAssembly();
-            var containerType = assembly.GetType("TestProject.TestContainer");
+        var assembly = await newProject.CompileToRealAssembly();
+        var containerType = assembly.GetType("TestProject.TestContainer");
 
-            var container = (ZeroIoCContainer)Activator.CreateInstance(containerType);
+        var container = (ZeroIoCContainer)Activator.CreateInstance(containerType);
             
-            var guidValue = Guid.NewGuid();
-            container.AddDelegate(o => guidValue, Reuse.Singleton);
-            var resolvedGuid = container.Resolve<Guid>();
+        var guidValue = Guid.NewGuid();
+        container.AddDelegate(o => guidValue, Reuse.Singleton);
+        var resolvedGuid = container.Resolve<Guid>();
 
-            Assert.IsTrue(guidValue == resolvedGuid);
+        Assert.True(guidValue == resolvedGuid);
             
-            var newGuid = Guid.NewGuid();
-            container.ReplaceDelegate(o => newGuid, Reuse.Singleton);
+        var newGuid = Guid.NewGuid();
+        container.ReplaceDelegate(o => newGuid, Reuse.Singleton);
             
-            Assert.IsFalse(newGuid == resolvedGuid);
-        }
+        Assert.False(newGuid == resolvedGuid);
     }
 }

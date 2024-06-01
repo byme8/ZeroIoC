@@ -2,9 +2,8 @@ name: .NET
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    tags:
+      - v**
 
 jobs:
   build:
@@ -12,32 +11,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 6.0.x
-    - name: Restore dependencies
-      run: dotnet restore ./src
-    - name: Build
-      run: dotnet build --no-restore -c release ./src
-    - name: Test
-      run: dotnet test --no-build --verbosity normal -c release ./src
-    - name: Publish ZeroIoC.Core NuGet
-      uses: brandedoutcast/publish-nuget@v2.5.5
-      with:
-        PROJECT_FILE_PATH: ./src/ZeroIoC.Core/ZeroIoC.Core.csproj
-        VERSION_FILE_PATH: ./src/Directory.Build.props
-        NUGET_KEY: ${{ secrets.NUGET_KEY }}
-    - name: Publish ZeroIoC.SourceGenerator NuGet
-      uses: brandedoutcast/publish-nuget@v2.5.5
-      with:
-        PROJECT_FILE_PATH: ./src/ZeroIoC.SourceGenerator/ZeroIoC.SourceGenerator.csproj
-        VERSION_FILE_PATH: ./src/Directory.Build.props
-        NUGET_KEY: ${{ secrets.NUGET_KEY }}
-    - name: Publish ZeroIoC NuGet
-      uses: brandedoutcast/publish-nuget@v2.5.5
-      with:
-        PROJECT_FILE_PATH: ./src/ZeroIoC/ZeroIoC.csproj
-        VERSION_FILE_PATH: ./src/Directory.Build.props
-        NUGET_KEY: ${{ secrets.NUGET_KEY }}
+      - uses: actions/checkout@v2
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --no-restore -c release ./src
+      - name: Test
+        run: dotnet test --no-build --verbosity normal -c release ./src
+      - name: Build And Pack
+        run: |
+          pwsh ./pack.ps1 -version ${GITHUB_REF_NAME:1}
+          cd ./nugets
+          dotnet nuget push *.nupkg --skip-duplicate -s https://nuget.org -k ${{ secrets.API_KEY }} 

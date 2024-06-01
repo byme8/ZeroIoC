@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using ZeroIoC.Tests.Data;
 using ZeroIoC.Tests.Utils;
 
 namespace ZeroIoC.Tests;
 
-[TestClass]
 public class OverridesTest
 {
-    [TestMethod]
+    [Fact]
     public async Task ConstructorOverridesWorks()
     {
         var project = await TestProject.Project.ApplyToProgram(@"
@@ -47,10 +46,10 @@ public class OverridesTest
         var service = container.Resolve(serviceType, Overrides.Create().Constructor(("value", "override")));
         
         var value = service.ReflectionGetValue("Value");
-        Assert.AreNotEqual(initialValue, value);
+        Assert.NotEqual(initialValue, value);
     }
     
-    [TestMethod]
+    [Fact]
     public async Task DeepDependencyOverridesWorks()
     {
         var project = await TestProject.Project.ApplyToProgram(@"
@@ -103,7 +102,7 @@ public class OverridesTest
         var value = service.ReflectionGetValue("Value");
         var repositoryValue = service.ReflectionGetValue("Repository").ReflectionGetValue("Value");
         
-        Assert.AreNotEqual(initialValue, value);
-        Assert.AreNotEqual(initialValue, repositoryValue);
+        Assert.NotEqual(initialValue, value);
+        Assert.NotEqual(initialValue, repositoryValue);
     }
 }
