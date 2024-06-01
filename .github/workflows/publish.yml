@@ -22,9 +22,9 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
       - name: Build
-        run: dotnet build --no-restore -c release ./src
+        run: dotnet build --no-restore -c release ./ZeroIoC.sln
       - name: Test
-        run: dotnet test --no-build --verbosity normal -c release ./src
+        run: dotnet test --no-build --verbosity normal -c release ./ZeroIoC.sln
 
   publish:
     if: github.ref_type == 'tag'
@@ -39,9 +39,9 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
       - name: Build
-        run: dotnet build --no-restore -c release ./src
+        run: dotnet build --no-restore -c release ./ZeroIoC.sln
       - name: Test
-        run: dotnet test --no-build --verbosity normal -c release ./src
+        run: dotnet test --no-build --verbosity normal -c release ./ZeroIoC.sln
       - name: Build And Pack
         run: |
           pwsh ./pack.ps1 -version ${GITHUB_REF_NAME:1}
