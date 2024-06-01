@@ -1,18 +1,17 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using ZeroIoC.Tests.Data;
 using ZeroIoC.Tests.Utils;
 
-namespace ZeroIoC.Tests
+namespace ZeroIoC.Tests;
+
+public class StatetmentsAnalyzerTest
 {
-    [TestClass]
-    public class StatetmentsAnalyzerTest
+    [Fact]
+    public async Task IfNotAllowed()
     {
-        [TestMethod]
-        public async Task IfNotAllowed()
-        {
-            var project = await TestProject.Project.ApplyToProgram(@"
+        var project = await TestProject.Project.ApplyToProgram(@"
 
         public interface IService
         {
@@ -36,16 +35,16 @@ namespace ZeroIoC.Tests
         }
 ");
 
-            var diagnostics = await project.ApplyAnalyzer(new ZeroIoCContainerAnalyzer());
+        var diagnostics = await project.ApplyAnalyzer(new ZeroIoCContainerAnalyzer());
 
-            Assert.IsTrue(diagnostics.Any(o => o.Id == Descriptors.StatementsNotAllowed.Id));
+        Assert.True(diagnostics.Any(o => o.Id == Descriptors.StatementsNotAllowed.Id));
 
-        }
+    }
 
-        [TestMethod]
-        public async Task WhileNotAllowed()
-        {
-            var project = await TestProject.Project.ApplyToProgram(@"
+    [Fact]
+    public async Task WhileNotAllowed()
+    {
+        var project = await TestProject.Project.ApplyToProgram(@"
 
         public interface IService
         {
@@ -69,15 +68,15 @@ namespace ZeroIoC.Tests
         }
 ");
 
-            var diagnostics = await project.ApplyAnalyzer(new ZeroIoCContainerAnalyzer());
+        var diagnostics = await project.ApplyAnalyzer(new ZeroIoCContainerAnalyzer());
 
-            Assert.IsTrue(diagnostics.Any(o => o.Id == Descriptors.StatementsNotAllowed.Id));
-        }
+        Assert.True(diagnostics.Any(o => o.Id == Descriptors.StatementsNotAllowed.Id));
+    }
 
-        [TestMethod]
-        public async Task ForNotAllowed()
-        {
-            var project = await TestProject.Project.ApplyToProgram(@"
+    [Fact]
+    public async Task ForNotAllowed()
+    {
+        var project = await TestProject.Project.ApplyToProgram(@"
 
         public interface IService
         {
@@ -101,9 +100,8 @@ namespace ZeroIoC.Tests
         }
 ");
 
-            var diagnostics = await project.ApplyAnalyzer(new ZeroIoCContainerAnalyzer());
+        var diagnostics = await project.ApplyAnalyzer(new ZeroIoCContainerAnalyzer());
 
-            Assert.IsTrue(diagnostics.Any(o => o.Id == Descriptors.StatementsNotAllowed.Id));
-        }
+        Assert.True(diagnostics.Any(o => o.Id == Descriptors.StatementsNotAllowed.Id));
     }
 }

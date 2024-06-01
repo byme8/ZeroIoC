@@ -29,14 +29,9 @@ namespace ZeroIoC.Benchmarks
     {
     }
 
-    public class SingleService
+    public class SingleService(SingleHelper helper)
     {
-        private readonly SingleHelper _helper;
-
-        public SingleService(SingleHelper helper)
-        {
-            _helper = helper;
-        }
+        private readonly SingleHelper _helper = helper;
     }
 
     public partial class Container : ZeroIoCContainer
