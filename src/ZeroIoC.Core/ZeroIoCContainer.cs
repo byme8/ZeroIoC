@@ -106,13 +106,13 @@ namespace ZeroIoC
             switch (reuse)
             {
                 case Reuse.Scoped:
-                    ScopedResolvers.AddOrReplace(interfaceType, new SingletonResolver(resolver));
+                    ScopedResolvers[interfaceType] =new SingletonResolver(resolver);
                     break;
                 case Reuse.Singleton:
-                    Resolvers.AddOrReplace(interfaceType, new SingletonResolver(resolver));
+                    Resolvers[interfaceType] = new SingletonResolver(resolver);
                     break;
                 case Reuse.Transient:
-                    Resolvers.AddOrReplace(interfaceType, new TransientResolver(resolver));
+                    Resolvers[interfaceType] = new TransientResolver(resolver);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(reuse), reuse, null);
@@ -126,7 +126,7 @@ namespace ZeroIoC
         
         public void ReplaceInstance<TValue>(TValue value)
         {
-            Resolvers.AddOrReplace(typeof(TValue), new SingletonResolver(o => value));
+            Resolvers[typeof(TValue)] = new SingletonResolver(o => value);
         }
 
         public void Merge(ZeroIoCContainer container)
