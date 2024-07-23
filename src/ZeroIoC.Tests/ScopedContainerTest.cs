@@ -93,12 +93,17 @@ public class ScopedContainerTest
     {
         var project = await TestProject.Project.ApplyToProgram(@"
 
-        public interface IService : IDisposable
+        public class SingletonService : IDisposable
         {
-            bool Disposed { get; set; }
+            public bool Disposed { get; set; }
+
+            public void Dispose()
+            {
+                Disposed = true;
+            }
         }
 
-        public class Service : IService
+        public class Service : IDisposable
         {
             public bool Disposed { get; set; }
 
@@ -112,7 +117,8 @@ public class ScopedContainerTest
         {
             protected override void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper)
             {
-                bootstrapper.AddScoped<IService, Service>();
+                bootstrapper.AddScoped<Service>();
+                bootstrapper.AddSingleton<SingletonService>();
             }
         }
 ");
@@ -121,20 +127,23 @@ public class ScopedContainerTest
 
         var assembly = await newProject.CompileToRealAssembly();
         var containerType = assembly.GetType("TestProject.TestContainer");
-        var serviceType = assembly.GetType("TestProject.IService");
+        var serviceType = assembly.GetType("TestProject.Service");
+        var singletonServiceType = assembly.GetType("TestProject.SingletonService");
 
         var container = (IZeroIoCResolver)Activator.CreateInstance(containerType);
 
         object service = null;
+        object singletonService = null;
         using (var scoped = container.CreateScope())
         {
             service = scoped.Resolve(serviceType);
-            var initialValue = (bool)service.ReflectionGetValue("Disposed");
+            Assert.False((bool)service.ReflectionGetValue("Disposed"));
 
-            Assert.False(initialValue);
+            singletonService = scoped.Resolve(singletonServiceType);
+            Assert.False((bool)service.ReflectionGetValue("Disposed"));
         }
 
-        var value = (bool)service.ReflectionGetValue("Disposed");
-        Assert.True(value);
+        Assert.True((bool)service.ReflectionGetValue("Disposed"));
+        Assert.False((bool)singletonService.ReflectionGetValue("Disposed"));
     }
 }

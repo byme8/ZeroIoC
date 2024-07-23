@@ -7,7 +7,9 @@ namespace ZeroIoC
     public abstract class ZeroIoCContainer : IZeroIoCResolver
     {
         protected readonly Dictionary<Type, IInstanceResolver> Resolvers = new Dictionary<Type, IInstanceResolver>();
-        protected readonly Dictionary<Type, IInstanceResolver> ScopedResolvers = new Dictionary<Type, IInstanceResolver>();
+
+        protected readonly Dictionary<Type, IInstanceResolver> ScopedResolvers =
+            new Dictionary<Type, IInstanceResolver>();
 
         protected readonly bool Scoped;
 
@@ -34,7 +36,7 @@ namespace ZeroIoC
         }
 
         protected abstract void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper);
-        
+
         public object Resolve(Type type)
         {
             if (Resolvers.TryGetValue(type, out var entry))
@@ -58,7 +60,7 @@ namespace ZeroIoC
             ExceptionHelper.ServiceIsNotRegistered(type.FullName);
             return null;
         }
-        
+
         public object Resolve(Type type, IOverrides overrides)
         {
             if (Resolvers.TryGetValue(type, out var entry))
@@ -83,7 +85,8 @@ namespace ZeroIoC
             return null;
         }
 
-        public void AddDelegate(Func<IZeroIoCResolver, object> resolver, Type interfaceType, Reuse reuse = Reuse.Transient)
+        public void AddDelegate(Func<IZeroIoCResolver, object> resolver, Type interfaceType,
+            Reuse reuse = Reuse.Transient)
         {
             switch (reuse)
             {
@@ -100,13 +103,14 @@ namespace ZeroIoC
                     throw new ArgumentOutOfRangeException(nameof(reuse), reuse, null);
             }
         }
-        
-        public void ReplaceDelegate(Func<IZeroIoCResolver, object> resolver, Type interfaceType, Reuse reuse = Reuse.Transient)
+
+        public void ReplaceDelegate(Func<IZeroIoCResolver, object> resolver, Type interfaceType,
+            Reuse reuse = Reuse.Transient)
         {
             switch (reuse)
             {
                 case Reuse.Scoped:
-                    ScopedResolvers[interfaceType] =new SingletonResolver(resolver);
+                    ScopedResolvers[interfaceType] = new SingletonResolver(resolver);
                     break;
                 case Reuse.Singleton:
                     Resolvers[interfaceType] = new SingletonResolver(resolver);
@@ -123,7 +127,7 @@ namespace ZeroIoC
         {
             Resolvers.Add(typeof(TValue), new SingletonResolver(o => value));
         }
-        
+
         public void ReplaceInstance<TValue>(TValue value)
         {
             Resolvers[typeof(TValue)] = new SingletonResolver(o => value);
@@ -144,9 +148,12 @@ namespace ZeroIoC
 
         public void Dispose()
         {
-            foreach (var resolver in Resolvers.Values)
+            if (!Scoped)
             {
-                resolver.Dispose();
+                foreach (var resolver in Resolvers.Values)
+                {
+                    resolver.Dispose();
+                }
             }
 
             foreach (var resolver in ScopedResolvers.Values)
