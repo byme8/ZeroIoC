@@ -3,6 +3,9 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <Description>Contains core APIs for ZeroIoC.</Description>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ZeroIoC</RootNamespace>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
 </Project>

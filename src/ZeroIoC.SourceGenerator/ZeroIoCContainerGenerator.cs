@@ -4,103 +4,107 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace ZeroIoC
+namespace ZeroIoC;
+
+[Generator]
+public class ZeroIoCContainerGenerator : ISourceGenerator
 {
-    [Generator]
-    public class ZeroIoCContainerGenerator : ISourceGenerator
+    public void Execute(GeneratorExecutionContext context)
     {
-        public void Execute(GeneratorExecutionContext context)
+        if (context.SyntaxReceiver is not ZeroIoCDeclarationReceiver receiver)
         {
-            if (context.SyntaxReceiver is not ZeroIoCDeclarationReceiver receiver)
-            {
-                return;
-            }
+            return;
+        }
 
-            if (!receiver.Declarations.Any())
-            {
-                return;
-            }
+        if (!receiver.Declarations.Any())
+        {
+            return;
+        }
 
-            foreach (var classDeclaration in receiver.Declarations)
+        foreach (var classDeclaration in receiver.Declarations)
+        {
+            GenerateContainer(context, classDeclaration);
+        }
+    }
+
+    public void Initialize(GeneratorInitializationContext context)
+    {
+        context.RegisterForSyntaxNotifications(() => new ZeroIoCDeclarationReceiver());
+    }
+
+    private void GenerateContainer(GeneratorExecutionContext context, ClassDeclarationSyntax classDeclaration)
+    {
+        var bootstrapMethod = classDeclaration
+            .DescendantNodes()
+            .OfType<MethodDeclarationSyntax>()
+            .FirstOrDefault(o => o.Identifier.Text == "Bootstrap");
+
+        if (bootstrapMethod == null)
+        {
+            return;
+        }
+
+        var invocations = bootstrapMethod
+            .DescendantNodes()
+            .OfType<InvocationExpressionSyntax>()
+            .ToArray();
+
+        var semantic = context.Compilation.GetSemanticModel(classDeclaration.SyntaxTree);
+
+        var entries = new List<ServiceEntry>();
+        foreach (var invocation in invocations)
+        {
+            if (invocation.Expression is MemberAccessExpressionSyntax member &&
+                member.Name is GenericNameSyntax generic)
             {
-                GenerateContainer(context, classDeclaration);
+                switch (generic.Identifier.Text)
+                {
+                    case "AddSingleton":
+                        AddTypes(entries, ServiceEntry.LifetimeKind.Singleton, generic, semantic);
+                        break;
+
+                    case "AddTransient":
+                        AddTypes(entries, ServiceEntry.LifetimeKind.Transient, generic, semantic);
+                        break;
+
+                    case "AddScoped":
+                        AddTypes(entries, ServiceEntry.LifetimeKind.Scoped, generic, semantic);
+                        break;
+                }
             }
         }
 
-        public void Initialize(GeneratorInitializationContext context)
-        {
-            context.RegisterForSyntaxNotifications(() => new ZeroIoCDeclarationReceiver());
-        }
+        var groupedEntries = entries
+            .GroupBy(o => o.Interface)
+            .ToArray();
 
-        private void GenerateContainer(GeneratorExecutionContext context, ClassDeclarationSyntax classDeclaration)
+        foreach (var entry in groupedEntries)
         {
-            var bootstrapMethod = classDeclaration
-                .DescendantNodes()
-                .OfType<MethodDeclarationSyntax>()
-                .FirstOrDefault(o => o.Identifier.Text == "Bootstrap");
-
-            if (bootstrapMethod == null)
+            if (entry.Count() > 1)
             {
+                foreach (var serviceEntry in entry)
+                {
+                    context.ReportDiagnostic(
+                        Diagnostic.Create(
+                            Descriptors.MultipleTypeRegistrationsNotAllowed,
+                            serviceEntry.Syntax.GetLocation()));
+                }
+
                 return;
             }
+        }
 
-            var invocations = bootstrapMethod
-                .DescendantNodes()
-                .OfType<InvocationExpressionSyntax>()
-                .ToArray();
+        var transients = new HashSet<string>(entries
+            .Where(o => o.Lifetime == ServiceEntry.LifetimeKind.Transient)
+            .Select(o => o.Interface.ToGlobalName()));
 
-            var semantic = context.Compilation.GetSemanticModel(classDeclaration.SyntaxTree);
-
-            var entries = new List<ServiceEntry>();
-            foreach (var invocation in invocations)
-            {
-                if (invocation.Expression is MemberAccessExpressionSyntax member &&
-                    member.Name is GenericNameSyntax generic)
-                {
-                    switch (generic.Identifier.Text)
-                    {
-                        case "AddSingleton":
-                            AddTypes(entries, ServiceEntry.LifetimeKind.Singleton, generic, semantic);
-                            break;
-
-                        case "AddTransient":
-                            AddTypes(entries, ServiceEntry.LifetimeKind.Transient, generic, semantic);
-                            break;
-
-                        case "AddScoped":
-                            AddTypes(entries, ServiceEntry.LifetimeKind.Scoped, generic, semantic);
-                            break;
-                    }
-                }
-            }
-
-            var groupedEntries = entries
-                .GroupBy(o => o.Interface)
-                .ToArray();
-
-            foreach (var entry in groupedEntries)
-            {
-                if (entry.Count() > 1)
-                {
-                    foreach (var serviceEntry in entry)
-                    {
-                        context.ReportDiagnostic(
-                            Diagnostic.Create(
-                                Descriptors.MultipleTypeRegistrationsNotAllowed,
-                                serviceEntry.Syntax.GetLocation()));
-                    }
-
-                    return;
-                }
-            }
-
-            var transients = new HashSet<string>(entries
-                .Where(o => o.Lifetime == ServiceEntry.LifetimeKind.Transient)
-                .Select(o => o.Interface.ToGlobalName()));
-
-            var containerType = semantic.GetDeclaredSymbol(classDeclaration);
-            var source =
-                @$"// This file generated for ZeroIoC.
+        var containerType = semantic.GetDeclaredSymbol(classDeclaration);
+        if (containerType == null)
+        {
+            return;
+        }
+        var source =
+            @$"// This file generated for ZeroIoC.
 // <auto-generated/>
 using System;
 using System.Linq;
@@ -167,84 +171,84 @@ namespace {containerType.ContainingNamespace}
     }}
 }}
 ";
-            context.AddSource(classDeclaration.Identifier.Text + "_ZeroIoCContainer", source);
-        }
+        context.AddSource(classDeclaration.Identifier.Text + "_ZeroIoCContainer", source);
+    }
 
-        private (string, string) MapResolver(ServiceEntry entry)
+    private (string, string) MapResolver(ServiceEntry entry)
+    {
+        switch (entry.Lifetime)
         {
-            switch (entry.Lifetime)
-            {
-                case ServiceEntry.LifetimeKind.Singleton:
-                    return ("Resolvers", "SingletonResolver");
-                case ServiceEntry.LifetimeKind.Transient:
-                    return ("Resolvers", "TransientResolver");
-                case ServiceEntry.LifetimeKind.Scoped:
-                    return ("ScopedResolvers", "SingletonResolver");
-                default:
-                    return ("", "");
-            }
+            case ServiceEntry.LifetimeKind.Singleton:
+                return ("Resolvers", "SingletonResolver");
+            case ServiceEntry.LifetimeKind.Transient:
+                return ("Resolvers", "TransientResolver");
+            case ServiceEntry.LifetimeKind.Scoped:
+                return ("ScopedResolvers", "SingletonResolver");
+            default:
+                return ("", "");
         }
+    }
 
-        private static string ResolveConstructor(GeneratorExecutionContext context, ServiceEntry entry, HashSet<string> transients)
-        {
-            var implementation = entry.Implementation;
-            var constructors = implementation.GetMembers()
-                .OfType<IMethodSymbol>()
-                .Where(o => o.MethodKind == MethodKind.Constructor)
-                .ToArray();
+    private static string ResolveConstructor(GeneratorExecutionContext context, ServiceEntry entry, HashSet<string> transients)
+    {
+        var implementation = entry.Implementation;
+        var constructors = implementation.GetMembers()
+            .OfType<IMethodSymbol>()
+            .Where(o => o.MethodKind == MethodKind.Constructor)
+            .ToArray();
             
-            var constructorsWithArguments = constructors
-                .Where(o => o.Parameters.Length > 0)
-                .ToArray();
+        var constructorsWithArguments = constructors
+            .Where(o => o.Parameters.Length > 0)
+            .ToArray();
             
-            if (constructorsWithArguments.Length > 1)
-            {
-                context.ReportDiagnostic(Diagnostic
-                    .Create(
-                        Descriptors.OnlyOneConstructorWithArgumentAllowed,
-                        entry.Syntax.GetLocation()));
-            }
-
-            var constructor = constructorsWithArguments.FirstOrDefault() ?? constructors.First();
-            var arguments = constructor.Parameters.Select(o => o.Type).ToArray();
-            var argumentsText = arguments.Select(o => transients.Contains(o.ToGlobalName()) ? $"default({o.ToCreatorName()}).Create(resolver)" : $"resolver.Resolve<{o.ToGlobalName()}>()");
-            return $"new {implementation.ToGlobalName()}({argumentsText.Join()})";
+        if (constructorsWithArguments.Length > 1)
+        {
+            context.ReportDiagnostic(Diagnostic
+                .Create(
+                    Descriptors.OnlyOneConstructorWithArgumentAllowed,
+                    entry.Syntax.GetLocation()));
         }
 
-        private static string ResolveConstructorBodyWithOverrides(ITypeSymbol typeSymbol)
-        {
-            var members = typeSymbol.GetMembers()
-                .OfType<IMethodSymbol>()
-                .Where(o => o.MethodKind == MethodKind.Constructor)
-                .ToArray();
+        var constructor = constructorsWithArguments.FirstOrDefault() ?? constructors.First();
+        var arguments = constructor.Parameters.Select(o => o.Type).ToArray();
+        var argumentsText = arguments.Select(o => transients.Contains(o.ToGlobalName()) ? $"default({o.ToCreatorName()}).Create(resolver)" : $"resolver.Resolve<{o.ToGlobalName()}>()");
+        return $"new {implementation.ToGlobalName()}({argumentsText.Join()})";
+    }
 
-            var constructor = members.First();
-            var arguments = constructor.Parameters
-                .Select((o, i) => @$"
+    private static string ResolveConstructorBodyWithOverrides(ITypeSymbol typeSymbol)
+    {
+        var members = typeSymbol.GetMembers()
+            .OfType<IMethodSymbol>()
+            .Where(o => o.MethodKind == MethodKind.Constructor)
+            .ToArray();
+
+        var constructor = members.First();
+        var arguments = constructor.Parameters
+            .Select((o, i) => @$"
                 var constructor{o.Name.ToLower()}{i}Override = overrides.Constructor.Overrides.TryGetValue(""{o.Name.ToLower()}"", out var constructor{o.Name.ToLower()}{i}Value);
                 var dependency{o.Name.ToLower()}{i}Override = overrides.Dependency.Overrides.TryGetValue(typeof({o.Type.ToGlobalName()}), out var dependency{o.Name.ToLower()}{i}Func);
 ")
-                .ToArray();
+            .ToArray();
 
-            return arguments.JoinWithNewLine();
-        }
+        return arguments.JoinWithNewLine();
+    }
 
-        private static string ResolveConstructorWithOverrides(ITypeSymbol typeSymbol, HashSet<string> transients)
-        {
-            var members = typeSymbol.GetMembers()
-                .OfType<IMethodSymbol>()
-                .Where(o => o.MethodKind == MethodKind.Constructor)
-                .ToArray();
+    private static string ResolveConstructorWithOverrides(ITypeSymbol typeSymbol, HashSet<string> transients)
+    {
+        var members = typeSymbol.GetMembers()
+            .OfType<IMethodSymbol>()
+            .Where(o => o.MethodKind == MethodKind.Constructor)
+            .ToArray();
 
-            var constructor = members.First();
-            var variables = constructor.Parameters
-                .Select(ResolveVariable);
+        var constructor = members.First();
+        var variables = constructor.Parameters
+            .Select(ResolveVariable);
 
-            var parameters = constructor.Parameters
-                .Select((o, i) => $"{o.Name.ToLower()}{i.ToString()}")
-                .Join();
+        var parameters = constructor.Parameters
+            .Select((o, i) => $"{o.Name.ToLower()}{i.ToString()}")
+            .Join();
 
-            return @$"
+        return @$"
                 var nextOverrides = Overrides.Create();
                 nextOverrides.Dependency = overrides.Dependency;
 
@@ -252,11 +256,11 @@ namespace {containerType.ContainingNamespace}
                 
                 return new {typeSymbol.ToGlobalName()}({parameters});";
 
-            string ResolveVariable(IParameterSymbol parameter, int index)
-            {
-                var parameterName = $"{parameter.Name.ToLower()}{index.ToString()}";
-                var parameterType = parameter.Type.ToGlobalName();
-                var result = $@"
+        string ResolveVariable(IParameterSymbol parameter, int index)
+        {
+            var parameterName = $"{parameter.Name.ToLower()}{index.ToString()}";
+            var parameterType = parameter.Type.ToGlobalName();
+            var result = $@"
                 {parameterType} {parameterName} = default;
                 if(constructor{parameterName}Override)
                 {{
@@ -274,61 +278,60 @@ namespace {containerType.ContainingNamespace}
                 }}
 ";
 
-                return result;
-            }
+            return result;
         }
+    }
 
-        private static void AddTypes(List<ServiceEntry> singletons, ServiceEntry.LifetimeKind lifetimeKind, GenericNameSyntax generic, SemanticModel semantic)
+    private static void AddTypes(List<ServiceEntry> singletons, ServiceEntry.LifetimeKind lifetimeKind, GenericNameSyntax generic, SemanticModel semantic)
+    {
+        if (generic.TypeArgumentList.Arguments.Count == 1)
         {
-            if (generic.TypeArgumentList.Arguments.Count == 1)
-            {
-                var type = generic.TypeArgumentList.Arguments.First();
-                var symbols = ExtractTypeSymbols(type, type);
-                singletons.Add(new ServiceEntry(lifetimeKind, generic, symbols.Interface, symbols.Implementation));
-            }
-
-            if (generic.TypeArgumentList.Arguments.Count == 2)
-            {
-                var interfaceType = generic.TypeArgumentList.Arguments.First();
-                var implementationType = generic.TypeArgumentList.Arguments.Last();
-
-                var symbols = ExtractTypeSymbols(interfaceType, implementationType);
-                singletons.Add(new ServiceEntry(lifetimeKind, generic, symbols.Interface, symbols.Implementation));
-            }
-
-            (ITypeSymbol Interface, ITypeSymbol Implementation) ExtractTypeSymbols(TypeSyntax interfaceType, TypeSyntax implementationType)
-            {
-                var interfaceSymbol = semantic.GetSpeculativeTypeInfo(interfaceType.SpanStart, interfaceType,
-                    SpeculativeBindingOption.BindAsTypeOrNamespace);
-                var implementationSymbol = semantic.GetSpeculativeTypeInfo(implementationType.SpanStart,
-                    implementationType, SpeculativeBindingOption.BindAsTypeOrNamespace);
-
-                return (interfaceSymbol.Type!, implementationSymbol.Type!);
-            }
-
+            var type = generic.TypeArgumentList.Arguments.First();
+            var symbols = ExtractTypeSymbols(type, type);
+            singletons.Add(new ServiceEntry(lifetimeKind, generic, symbols.Interface, symbols.Implementation));
         }
 
-        private class ServiceEntry
+        if (generic.TypeArgumentList.Arguments.Count == 2)
         {
-            public enum LifetimeKind
-            {
-                Singleton,
-                Transient,
-                Scoped,
-            }
+            var interfaceType = generic.TypeArgumentList.Arguments.First();
+            var implementationType = generic.TypeArgumentList.Arguments.Last();
 
-            public ServiceEntry(LifetimeKind lifetime, GenericNameSyntax syntax, ITypeSymbol @interface, ITypeSymbol implementation)
-            {
-                Lifetime = lifetime;
-                Syntax = syntax;
-                Interface = @interface;
-                Implementation = implementation;
-            }
-
-            public LifetimeKind Lifetime { get; }
-            public GenericNameSyntax Syntax { get; }
-            public ITypeSymbol Interface { get; }
-            public ITypeSymbol Implementation { get; }
+            var symbols = ExtractTypeSymbols(interfaceType, implementationType);
+            singletons.Add(new ServiceEntry(lifetimeKind, generic, symbols.Interface, symbols.Implementation));
         }
+
+        (ITypeSymbol Interface, ITypeSymbol Implementation) ExtractTypeSymbols(TypeSyntax interfaceType, TypeSyntax implementationType)
+        {
+            var interfaceSymbol = semantic.GetSpeculativeTypeInfo(interfaceType.SpanStart, interfaceType,
+                SpeculativeBindingOption.BindAsTypeOrNamespace);
+            var implementationSymbol = semantic.GetSpeculativeTypeInfo(implementationType.SpanStart,
+                implementationType, SpeculativeBindingOption.BindAsTypeOrNamespace);
+
+            return (interfaceSymbol.Type!, implementationSymbol.Type!);
+        }
+
+    }
+
+    private class ServiceEntry
+    {
+        public enum LifetimeKind
+        {
+            Singleton,
+            Transient,
+            Scoped,
+        }
+
+        public ServiceEntry(LifetimeKind lifetime, GenericNameSyntax syntax, ITypeSymbol @interface, ITypeSymbol implementation)
+        {
+            Lifetime = lifetime;
+            Syntax = syntax;
+            Interface = @interface;
+            Implementation = implementation;
+        }
+
+        public LifetimeKind Lifetime { get; }
+        public GenericNameSyntax Syntax { get; }
+        public ITypeSymbol Interface { get; }
+        public ITypeSymbol Implementation { get; }
     }
 }

@@ -1,13 +1,12 @@
 ﻿using System;
 
-namespace ZeroIoC
-{
-    public class ServiceIsNotRegistered : Exception
-    {
-        public ServiceIsNotRegistered(string message)
-            : base(message)
-        {
+namespace ZeroIoC;
 
-        }
+public class ServiceIsNotRegistered : Exception
+{
+    public ServiceIsNotRegistered(string message)
+        : base(message)
+    {
+
     }
 }

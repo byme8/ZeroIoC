@@ -97,6 +97,75 @@ public class BasicContainerTest
 
         Assert.True(firstService != null && secondService != null && !firstService.Equals(secondService));
     }
+    
+    [Fact]
+    public async Task CanTryResolveMissingService()
+    {
+        var project = await TestProject.Project.ApplyToProgram(@"
+
+        public interface IService
+        {
+
+        }
+
+        public class Service : IService
+        {
+
+        }
+
+        public partial class TestContainer : ZeroIoCContainer
+        {
+            protected override void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper)
+            {
+            }
+        }
+");
+
+        var newProject = await project.ApplyZeroIoCGenerator();
+
+        var assembly = await newProject.CompileToRealAssembly();
+        var containerType = assembly.GetType("TestProject.TestContainer")!;
+        var serviceType = assembly.GetType("TestProject.IService")!;
+        var container = (IZeroIoCResolver)Activator.CreateInstance(containerType);
+        var firstService = container!.TryResolve(serviceType);
+        
+        Assert.Null(firstService);
+    }
+    
+    [Fact]
+    public async Task CanTryResolveExistingService()
+    {
+        var project = await TestProject.Project.ApplyToProgram(@"
+
+        public interface IService
+        {
+
+        }
+
+        public class Service : IService
+        {
+
+        }
+
+        public partial class TestContainer : ZeroIoCContainer
+        {
+            protected override void Bootstrap(IZeroIoCContainerBootstrapper bootstrapper)
+            {
+                bootstrapper.AddTransient<IService, Service>();
+            }
+        }
+");
+
+        var newProject = await project.ApplyZeroIoCGenerator();
+
+        var assembly = await newProject.CompileToRealAssembly();
+        var containerType = assembly.GetType("TestProject.TestContainer")!;
+        var serviceType = assembly.GetType("TestProject.IService")!;
+        var container = (IZeroIoCResolver)Activator.CreateInstance(containerType);
+        var firstService = container!.TryResolve(serviceType);
+        
+        Assert.NotNull(firstService);
+    }
 
     [Fact]
     public async Task HandlesMultipleContainersInTheSameTime()

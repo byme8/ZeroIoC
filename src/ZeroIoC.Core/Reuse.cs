@@ -1,9 +1,8 @@
-﻿namespace ZeroIoC
+﻿namespace ZeroIoC;
+
+public enum Reuse
 {
-    public enum Reuse
-    {
-        Scoped,
-        Singleton,
-        Transient
-    }
+    Scoped,
+    Singleton,
+    Transient
 }
